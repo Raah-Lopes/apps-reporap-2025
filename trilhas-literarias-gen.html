@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trilhas Literárias (Obsidian)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-main: #f9fafb; --bg-container: #ffffff; --text-primary: #1f2937; --text-secondary: #4b5563;
+            --border-color: #e5e7eb; --input-bg: #ffffff; --input-border: #d1d5db; --tab-active-text: #2563eb;
+            --tab-inactive-text: #6b7280;
+        }
+        html.dark {
+            --bg-main: #111827; --bg-container: #1f2937; --text-primary: #f9fafb; --text-secondary: #9ca3af;
+            --border-color: #374151; --input-bg: #374151; --input-border: #4b5563; --tab-active-text: #60a5fa;
+            --tab-inactive-text: #9ca3af;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; padding-bottom: 80px; /* Space for the tray */ }
+        .container-bg { background-color: var(--bg-container); } .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); } .border-color { border-color: var(--border-color); }
+        .input-bg { background-color: var(--input-bg); } .input-border { border-color: var(--input-border); }
+        .tab-active { color: var(--tab-active-text); border-color: var(--tab-active-text); }
+        .tab-inactive { color: var(--tab-inactive-text); }
+        .preset-checkbox:checked + label { background-color: #3b82f6; color: white; border-color: #2563eb; }
+        html.dark .preset-checkbox:checked + label { background-color: #60a5fa; color: #1f2937; border-color: #93c5fd; }
+        .loader { border: 4px solid #e5e7eb; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        html.dark .loader { border-color: #374151; border-top-color: #60a5fa; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .word-item .action-icon { opacity: 0; transition: opacity 0.2s ease-in-out; }
+        .word-item:hover .action-icon { opacity: 1; }
+        .word-item .favorite-star.favorited { opacity: 1; color: #facc15; }
+        #editor.drag-over { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5); }
+        .collection-tray { transition: transform 0.3s ease-in-out; }
+        .collection-tray.collapsed { transform: translateY(calc(100% - 48px)); }
+        .drag-over-placeholder { background-color: rgba(96, 165, 250, 0.2); border: 2px dashed #60a5fa; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen">
+    <div class="container-bg p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-6xl border border-color relative mx-auto my-8">
+        <div class="absolute top-4 right-4 flex items-center gap-4 z-10">
+            <select id="project-selector" class="p-2 text-sm border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></select>
+            <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"></button>
+        </div>
+
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-center text-primary mb-8">Trilhas Literárias</h1>
+
+        <div class="flex flex-wrap justify-center mb-6 border-b border-color">
+            <button data-tab="generator" class="tab-button px-4 py-3 font-semibold text-lg transition duration-300 ease-in-out border-b-4 tab-active">Gerador</button>
+            <button data-tab="triggers" class="tab-button px-4 py-3 font-semibold text-lg transition duration-300 ease-in-out border-b-4 border-transparent tab-inactive hover:text-blue-500">Gatilhos</button>
+            <button data-tab="rhymes" class="tab-button px-4 py-3 font-semibold text-lg transition duration-300 ease-in-out border-b-4 border-transparent tab-inactive hover:text-blue-500">Rimas</button>
+            <button data-tab="writer" class="tab-button px-4 py-3 font-semibold text-lg transition duration-300 ease-in-out border-b-4 border-transparent tab-inactive hover:text-blue-500">Escrever</button>
+            <button data-tab="favorites" class="tab-button px-4 py-3 font-semibold text-lg transition duration-300 ease-in-out border-b-4 border-transparent tab-inactive hover:text-blue-500">Favoritos <span id="favorites-count" class="ml-1 bg-blue-100 text-blue-600 text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span></button>
+            <button data-tab="settings" class="tab-button px-4 py-3 font-semibold text-lg transition duration-300 ease-in-out border-b-4 border-transparent tab-inactive hover:text-blue-500">Configurações</button>
+        </div>
+
+        <div id="content-container">
+            <!-- Conteúdo das abas -->
+            <div id="content-generator" class="tab-content">
+                 <div class="flex justify-center mb-4 border-b border-color">
+                    <button data-subtab="theme" class="subtab-button px-4 py-2 font-semibold border-b-2 border-blue-500 text-blue-500">Tema Livre</button>
+                    <button data-subtab="style" class="subtab-button px-4 py-2 font-semibold border-b-2 border-transparent text-secondary">Estilos</button>
+                </div>
+                <div id="subcontent-theme">
+                    <input id="theme-input" type="text" placeholder="Ex: biblioteca em um farol" class="w-full p-4 text-lg border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    <div id="history-section" class="mt-4">
+                        <h3 class="font-semibold text-secondary text-sm mb-2">Histórico:</h3>
+                        <div id="history-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <div id="subcontent-style" class="hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-secondary text-sm">Selecione estilos para combinar.</p>
+                        <button id="surprise-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 text-sm rounded-lg transition-transform transform hover:scale-105">Surpreenda-me!</button>
+                    </div>
+                    <div id="presets-list" class="max-h-48 overflow-y-auto p-2 border border-color rounded-lg"></div>
+                </div>
+                <div class="mt-4 space-y-4">
+                    <input id="exclude-input" type="text" placeholder="Palavras a evitar (opcional)" class="w-full p-3 text-base border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    <div class="flex items-center gap-4">
+                        <label for="creativity-slider" class="font-medium text-secondary text-sm">Ousadia:</label>
+                        <input id="creativity-slider" type="range" min="0" max="2" value="1" class="w-full">
+                        <span id="creativity-label" class="text-sm font-semibold text-primary w-20 text-center">Normal</span>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap items-center justify-center gap-4">
+                    <div class="flex items-center space-x-2">
+                        <label for="result-type" class="font-medium text-secondary">Gerar:</label>
+                        <select id="result-type" class="p-2 text-base border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            <option value="Palavras">Palavras</option>
+                            <option value="Frases Curtas">Frases Curtas</option>
+                            <option value="Nomes de Personagens">Nomes de Personagens</option>
+                            <option value="Nomes de Lugares">Nomes de Lugares</option>
+                            <option value="Sinopse de 1 linha">Sinopse</option>
+                            <option value="Descrição de Ambiente">Descrição de Ambiente</option>
+                            <option value="Gancho de Trama">Gancho de Trama</option>
+                            <option value="Diálogo Curto">Diálogo Curto</option>
+                            <option value="Item Especial">Item Especial</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label for="num-items" class="font-medium text-secondary">Qtd:</label>
+                        <input id="num-items" type="number" value="20" min="1" class="w-20 p-2 text-lg border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                </div>
+                <div class="mt-6 text-center">
+                    <button id="generate-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl py-3 px-10 rounded-lg transition-transform transform hover:scale-105 shadow-lg">Gerar</button>
+                </div>
+            </div>
+            
+            <div id="content-triggers" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-primary">Gatilhos Criativos</h2>
+                    <button id="add-triggers-to-tray-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">Adicionar Tudo à Cesta</button>
+                </div>
+                <p id="trigger-prompt-message" class="text-center text-secondary mb-6">Defina um tema na aba "Gerador" para ver os gatilhos.</p>
+                <div id="trigger-results-container" class="max-h-[60vh] overflow-y-auto p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+            </div>
+
+            <div id="content-rhymes" class="tab-content hidden">
+                 <h2 class="text-2xl font-bold text-primary mb-4 text-center">Gerador de Rimas</h2>
+                 <div class="max-w-md mx-auto">
+                    <input id="rhyme-input" type="text" placeholder="Digite uma palavra para encontrar rimas" class="w-full p-4 text-lg border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    <div class="mt-6 text-center">
+                        <button id="generate-rhymes-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-xl py-3 px-10 rounded-lg transition-transform transform hover:scale-105 shadow-lg">Encontrar Rimas</button>
+                    </div>
+                 </div>
+            </div>
+
+            <div id="content-writer" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-primary">Editor de Texto</h2>
+                    <button id="export-md-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition">Exportar para .md</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-[60vh]">
+                    <div class="md:col-span-2 h-full">
+                        <textarea id="editor" class="w-full h-full p-4 border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition resize-none" placeholder="Comece a escrever..."></textarea>
+                    </div>
+                    <div id="writer-sidebar" class="h-full overflow-y-auto p-2 border-l border-color">
+                        <h3 class="font-bold text-lg text-primary mb-2">Arraste seus Favoritos</h3>
+                        <div id="writer-favorites-list" class="flex flex-col gap-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="content-favorites" class="tab-content hidden">
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                    <h2 class="text-2xl font-bold text-primary">Suas Palavras Favoritas</h2>
+                    <div id="favorites-actions-container" class="hidden space-x-4">
+                        <button id="copy-favorites-btn" class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-primary font-bold py-2 px-6 rounded-lg transition">Copiar</button>
+                        <button id="export-favorites-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition">Exportar</button>
+                    </div>
+                </div>
+                <div id="favorites-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 bg-gray-100 dark:bg-gray-900/50 rounded-lg border border-color min-h-[100px]"></div>
+            </div>
+            <div id="content-settings" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-primary mb-4 text-center">Configurações</h2>
+                <div class="max-w-md mx-auto space-y-4">
+                    <div>
+                        <label for="api-key-input" class="block font-medium text-secondary mb-2">Sua Chave da API do Gemini</label>
+                        <input id="api-key-input" type="password" placeholder="Cole sua chave aqui" class="w-full p-3 border-2 input-border input-bg rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        <p class="text-xs text-secondary mt-1">Sua chave é salva apenas no seu navegador e nunca é enviada para nossos servidores.</p>
+                    </div>
+                    <button id="save-api-key-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">Salvar Chave</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="results-container" class="mt-8">
+            <div id="message-area" class="text-center h-6 mb-2"></div>
+            <div id="loader" class="hidden mx-auto loader"></div>
+            <div id="words-output" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2"></div>
+            <div id="result-actions-container" class="text-center mt-4 hidden space-x-4">
+                <button id="add-results-to-tray-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition">Adicionar à Cesta</button>
+                <button id="copy-results-btn" class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-primary font-bold py-2 px-6 rounded-lg transition">Copiar</button>
+                <button id="export-results-btn" class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-primary font-bold py-2 px-6 rounded-lg transition">Exportar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cesta de Coleta Flutuante -->
+    <div id="collection-tray" class="collection-tray fixed bottom-0 left-0 right-0 z-20 container-bg border-t-2 border-color shadow-2xl">
+        <div id="tray-header" class="flex justify-between items-center p-3 cursor-pointer">
+            <h3 class="font-bold text-primary">Cesta de Coleta (<span id="tray-count">0</span>)</h3>
+            <div class="flex items-center gap-4">
+                <button id="copy-tray-btn" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Copiar Tudo</button>
+                <button id="clear-tray-btn" class="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition">Limpar</button>
+                <button id="toggle-tray-btn">
+                    <!-- Ícone de Chevron injetado por JS -->
+                </button>
+            </div>
+        </div>
+        <div id="tray-content" class="p-4 max-h-48 overflow-y-auto">
+            <!-- Itens da cesta aparecerão aqui -->
+        </div>
+    </div>
+
+    <script>
+        const icons = {
+            star: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 favorite-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+            plus: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 action-icon text-white/80"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+            x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+            chevronUp: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><polyline points="18 15 12 9 6 15"></polyline></svg>',
+            chevronDown: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><polyline points="6 9 12 15 18 9"></polyline></svg>',
+            sun: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>',
+            moon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+        };
+
+        const categorizedStyles = {
+            "Ficção Científica": { "Futurista": `...`, "Cyberpunk": `...`, "Pós-apocalíptico": `...`, "Espacial": `...`, "Space Opera": `...`, "Viagem no Tempo": `...`, "Steampunk": `...`, "Atompunk": `...`, "Dieselpunk": `...`, "Solarpunk": `...`, "Biopunk": `...` },
+            "Fantasia": { "Fantasia Épica": `...`, "Fantasia Sombria": `...`, "Fantasia Urbana": `...`, "Realismo Mágico": `...`, "Cozy Fantasy": `...`, "Grimdark": `...`, "Wuxia": `...`, "LitRPG": `...`, "Flintlock Fantasy": `...` },
+            "Horror & Suspense": { "Noir": `...`, "Horror Cósmico": `...`, "Gótico": `...`, "Apocalipse Zumbi": `...`, "Slasher": `...`, "Folk Horror": `...`, "Thriller Psicológico": `...` },
+            "Histórico & Período": { "Medieval": `...`, "Viking": `...`, "Faroeste": `...`, "Mitologia Grega": `...`, "Roma Antiga": `...`, "Era dos Piratas": `...`, "Vitoriano": `...` },
+            "Estilos Literários": { "Dark Academia": `...`, "Hopepunk": `...`, "Surrealismo": `...`, "Pós-modernismo": `...`, "Minimalismo": `...` }
+        };
+
+        const creativeTriggers = {
+            'E se...?': "Gere 5 cenários hipotéticos intrigantes começando com 'E se...'",
+            'Combinações Criativas': "Gere 5 combinações inesperadas de dois conceitos",
+            'Conceitos Abstratos': "Gere 5 conceitos abstratos ou filosóficos",
+            'Tipos de Personagens': "Gere 5 arquétipos ou tipos de personagens interessantes",
+            'Nomes de Personagens': "Gere 10 nomes de personagens",
+            'Elementos de Cenário': "Gere 10 elementos de cenário ou objetos marcantes",
+            'Verbos de Ação': "Gere 10 verbos de ação vívidos e incomuns",
+            'Conflitos e Desafios': "Gere 5 ideias de conflitos centrais ou desafios para personagens",
+            'Estética e Estilo': "Descreva em 3 frases a estética visual e o estilo",
+            'Tecnologias/Magia': "Gere 5 sistemas de tecnologia ou magia",
+            'Tropos Comuns': "Liste 5 tropos comuns e uma forma de subvertê-los",
+            'Organizações': "Gere 5 nomes e descrições de organizações ou facções",
+        };
+        
+        let state = {
+            activeTab: 'generator', activeSubTab: 'theme', generatedResults: [],
+            favorites: [], history: [], projects: {}, activeProject: 'default',
+            collectionTray: [], generatedTriggers: [], apiKey: ''
+        };
+
+        const dom = {
+            darkModeToggle: document.getElementById('dark-mode-toggle'), projectSelector: document.getElementById('project-selector'),
+            favoritesCount: document.getElementById('favorites-count'), themeInput: document.getElementById('theme-input'),
+            historyList: document.getElementById('history-list'), presetsList: document.getElementById('presets-list'),
+            excludeInput: document.getElementById('exclude-input'), creativitySlider: document.getElementById('creativity-slider'),
+            creativityLabel: document.getElementById('creativity-label'), resultType: document.getElementById('result-type'),
+            numItems: document.getElementById('num-items'), generateBtn: document.getElementById('generate-btn'),
+            rhymeInput: document.getElementById('rhyme-input'), generateRhymesBtn: document.getElementById('generate-rhymes-btn'),
+            triggerResultsContainer: document.getElementById('trigger-results-container'),
+            triggerPromptMessage: document.getElementById('trigger-prompt-message'),
+            addTriggersToTrayBtn: document.getElementById('add-triggers-to-tray-btn'),
+            messageArea: document.getElementById('message-area'), loader: document.getElementById('loader'),
+            wordsOutput: document.getElementById('words-output'), resultActionsContainer: document.getElementById('result-actions-container'),
+            addResultsToTrayBtn: document.getElementById('add-results-to-tray-btn'),
+            editor: document.getElementById('editor'), writerFavoritesList: document.getElementById('writer-favorites-list'),
+            favoritesList: document.getElementById('favorites-list'), favoritesActionsContainer: document.getElementById('favorites-actions-container'),
+            collectionTray: document.getElementById('collection-tray'), trayHeader: document.getElementById('tray-header'),
+            trayContent: document.getElementById('tray-content'), trayCount: document.getElementById('tray-count'),
+            toggleTrayBtn: document.getElementById('toggle-tray-btn'), copyTrayBtn: document.getElementById('copy-tray-btn'),
+            clearTrayBtn: document.getElementById('clear-tray-btn'),
+            apiKeyInput: document.getElementById('api-key-input'),
+            saveApiKeyBtn: document.getElementById('save-api-key-btn'),
+            exportMdBtn: document.getElementById('export-md-btn'),
+        };
+
+        function init() {
+            loadProjects();
+            loadStateForProject(state.activeProject);
+            loadApiKey();
+            setupInitialUI();
+            setupEventListeners();
+        }
+        
+        function setupInitialUI() {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem('darkMode');
+            setDarkMode(savedTheme === 'true' || (savedTheme === null && prefersDark));
+            renderCategorizedPresets();
+            renderProjectSelector();
+            renderHistory();
+            updateFavoritesCount();
+            dom.toggleTrayBtn.innerHTML = icons.chevronDown;
+            dom.collectionTray.classList.add('collapsed');
+        }
+
+        function setupEventListeners() {
+            dom.darkModeToggle.addEventListener('click', () => setDarkMode(!document.documentElement.classList.contains('dark')));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+            document.querySelectorAll('.subtab-button').forEach(btn => btn.addEventListener('click', () => switchSubTab(btn.dataset.subtab)));
+            dom.generateBtn.addEventListener('click', generate);
+            dom.generateRhymesBtn.addEventListener('click', generateRhymes);
+            document.getElementById('surprise-btn').addEventListener('click', generateSurprise);
+            dom.projectSelector.addEventListener('change', (e) => switchProject(e.target.value));
+            dom.creativitySlider.addEventListener('input', updateCreativityLabel);
+            dom.addResultsToTrayBtn.addEventListener('click', () => addMultipleToTray(state.generatedResults));
+            dom.addTriggersToTrayBtn.addEventListener('click', () => addMultipleToTray(state.generatedTriggers));
+            document.getElementById('copy-results-btn').addEventListener('click', () => copyToClipboard(state.generatedResults, 'resultados'));
+            document.getElementById('export-results-btn').addEventListener('click', () => exportToFile(state.generatedResults, 'resultados_gerados', 'text/plain'));
+            document.getElementById('copy-favorites-btn').addEventListener('click', () => copyToClipboard(state.favorites, 'favoritos'));
+            document.getElementById('export-favorites-btn').addEventListener('click', () => exportToFile(state.favorites, 'meus_favoritos', 'text/plain'));
+            dom.exportMdBtn.addEventListener('click', () => {
+                const rawContent = dom.editor.value;
+                const formattedContent = rawContent.replace(/\n+/g, '\n\n');
+                const title = rawContent.split('\n')[0].substring(0, 30).replace(/[^a-z0-9]/gi, '_') || 'minha_nota';
+                exportToFile([formattedContent], title, 'text/markdown', 'md');
+            });
+            dom.editor.addEventListener('dragover', e => e.preventDefault());
+            dom.editor.addEventListener('drop', e => {
+                e.preventDefault();
+                const text = e.dataTransfer.getData('text/plain');
+                dom.editor.value += ` ${text}`;
+            });
+            // Cesta de Coleta
+            dom.trayHeader.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                toggleTray();
+            });
+            dom.toggleTrayBtn.addEventListener('click', toggleTray);
+            dom.clearTrayBtn.addEventListener('click', clearTray);
+            dom.copyTrayBtn.addEventListener('click', () => copyToClipboard(state.collectionTray.map(item => item.text), 'itens da cesta'));
+            dom.trayContent.addEventListener('click', (e) => {
+                if (e.target.closest('.remove-tray-item-btn')) {
+                    const id = parseInt(e.target.closest('.remove-tray-item-btn').dataset.id, 10);
+                    removeFromTray(id);
+                }
+            });
+            dom.trayContent.addEventListener('change', (e) => {
+                if (e.target.classList.contains('tray-item-category')) {
+                    const id = parseInt(e.target.dataset.id, 10);
+                    changeTrayItemCategory(id, e.target.value);
+                }
+            });
+            // Configurações
+            dom.saveApiKeyBtn.addEventListener('click', saveApiKey);
+        }
+        
+        function setDarkMode(isDark) {
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                dom.darkModeToggle.innerHTML = icons.sun;
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.documentElement.classList.remove('dark');
+                dom.darkModeToggle.innerHTML = icons.moon;
+                localStorage.setItem('darkMode', 'false');
+            }
+        }
+        
+        function saveApiKey() {
+            state.apiKey = dom.apiKeyInput.value.trim();
+            localStorage.setItem('geminiApiKey', state.apiKey);
+            displayMessage('Chave da API salva com sucesso!', 'success');
+            setTimeout(() => { switchTab('generator'); }, 1000);
+        }
+
+        function loadApiKey() {
+            state.apiKey = localStorage.getItem('geminiApiKey') || '';
+            dom.apiKeyInput.value = state.apiKey;
+        }
+
+        function loadProjects() {
+            state.projects = JSON.parse(localStorage.getItem('creativeSuiteProjects')) || { 'default': { favorites: [], history: [] } };
+            state.activeProject = localStorage.getItem('creativeSuiteActiveProject') || 'default';
+        }
+
+        function saveStateForProject() {
+            state.projects[state.activeProject] = {
+                favorites: state.favorites,
+                history: state.history
+            };
+            localStorage.setItem('creativeSuiteProjects', JSON.stringify(state.projects));
+        }
+
+        function loadStateForProject(projectName) {
+            const projectData = state.projects[projectName];
+            state.favorites = projectData ? projectData.favorites || [] : [];
+            state.history = projectData ? projectData.history || [] : [];
+        }
+
+        function switchProject(projectName) {
+            if (projectName === 'new') {
+                const newProjectName = prompt("Digite o nome do novo projeto:");
+                if (newProjectName && !state.projects[newProjectName]) {
+                    state.projects[newProjectName] = { favorites: [], history: [] };
+                    projectName = newProjectName;
+                } else if (newProjectName) {
+                    alert("Um projeto com esse nome já existe.");
+                    dom.projectSelector.value = state.activeProject;
+                    return;
+                } else {
+                    dom.projectSelector.value = state.activeProject;
+                    return;
+                }
+            }
+            state.activeProject = projectName;
+            localStorage.setItem('creativeSuiteActiveProject', projectName);
+            loadStateForProject(projectName);
+            renderProjectSelector();
+            renderHistory();
+            updateFavoritesCount();
+            renderFavorites();
+            renderWriterFavorites();
+        }
+
+        function renderProjectSelector() {
+            dom.projectSelector.innerHTML = '';
+            for (const projectName in state.projects) {
+                const option = document.createElement('option');
+                option.value = projectName;
+                option.textContent = projectName === 'default' ? 'Projeto Padrão' : projectName;
+                dom.projectSelector.appendChild(option);
+            }
+            dom.projectSelector.value = state.activeProject;
+            const newOption = document.createElement('option');
+            newOption.value = 'new';
+            newOption.textContent = 'Criar novo projeto...';
+            dom.projectSelector.appendChild(newOption);
+        }
+        
+        function switchTab(tabName) {
+            state.activeTab = tabName;
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive', 'border-transparent', 'hover:text-blue-500');
+            });
+            const activeBtn = document.querySelector(`button[data-tab="${tabName}"]`);
+            activeBtn.classList.add('tab-active');
+            activeBtn.classList.remove('tab-inactive', 'border-transparent', 'hover:text-blue-500');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            
+            renderResults([]);
+            displayMessage('');
+
+            if (tabName === 'favorites') renderFavorites();
+            if (tabName === 'writer') renderWriterFavorites();
+            if (tabName === 'triggers') generateAllTriggers();
+        }
+        
+        function switchSubTab(subTabName) {
+            state.activeSubTab = subTabName;
+             document.querySelectorAll('.subtab-button').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-500');
+                btn.classList.add('border-transparent', 'text-secondary');
+            });
+            const activeBtn = document.querySelector(`button[data-subtab="${subTabName}"]`);
+            activeBtn.classList.add('border-blue-500', 'text-blue-500');
+            activeBtn.classList.remove('border-transparent', 'text-secondary');
+
+            if(subTabName === 'theme') {
+                document.getElementById('subcontent-theme').classList.remove('hidden');
+                document.getElementById('subcontent-style').classList.add('hidden');
+            } else {
+                document.getElementById('subcontent-theme').classList.add('hidden');
+                document.getElementById('subcontent-style').classList.remove('hidden');
+            }
+        }
+
+        function renderCategorizedPresets() {
+            const container = dom.presetsList;
+            container.innerHTML = '';
+            for (const category in categorizedStyles) {
+                container.innerHTML += `<h3 class="font-bold text-primary mt-4 mb-2 first:mt-0">${category}</h3>`;
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3';
+                for (const style in categorizedStyles[category]) {
+                    const presetId = `preset-${style.replace(/\s+/g, '-')}`;
+                    grid.innerHTML += `
+                        <div>
+                            <input type="checkbox" id="${presetId}" name="preset" value="${style}" class="hidden preset-checkbox">
+                            <label for="${presetId}" class="block cursor-pointer p-2 text-center text-sm font-medium text-primary bg-white dark:bg-gray-700 border-2 border-color rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition duration-200">
+                                ${style}
+                            </label>
+                        </div>
+                    `;
+                }
+                container.appendChild(grid);
+            }
+        }
+
+        function updateFavoritesCount() {
+            const count = state.favorites.length;
+            dom.favoritesCount.textContent = count;
+            dom.favoritesCount.classList.toggle('hidden', count === 0);
+        }
+
+        function renderFavorites() {
+            dom.favoritesList.innerHTML = '';
+            if (state.favorites.length === 0) {
+                dom.favoritesList.innerHTML = `<p class="text-secondary italic">Você ainda não salvou nenhuma palavra.</p>`;
+                dom.favoritesActionsContainer.classList.add('hidden');
+                return;
+            }
+            state.favorites.forEach(word => dom.favoritesList.appendChild(createWordElement(word)));
+            dom.favoritesActionsContainer.classList.remove('hidden');
+        }
+        
+        function toggleFavorite(word) {
+            const index = state.favorites.indexOf(word);
+            if (index > -1) state.favorites.splice(index, 1);
+            else state.favorites.push(word);
+            saveStateForProject();
+            updateFavoritesCount();
+            renderResults(state.generatedResults);
+            if(state.activeTab === 'favorites') renderFavorites();
+            if(state.activeTab === 'writer') renderWriterFavorites();
+        }
+
+        function createWordElement(word) {
+            const isFavorited = state.favorites.includes(word);
+            const wordEl = document.createElement('div');
+            wordEl.className = 'word-item relative bg-blue-600 text-white dark:bg-indigo-500 dark:text-white text-sm font-medium pl-4 pr-2 py-1 rounded-full fade-in flex items-center gap-2';
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = word;
+            wordEl.appendChild(textSpan);
+
+            const starBtn = document.createElement('button');
+            starBtn.innerHTML = icons.star;
+            starBtn.className = `action-icon focus:outline-none text-white/50 hover:text-white ${isFavorited ? 'favorited' : ''}`;
+            starBtn.onclick = () => toggleFavorite(word);
+            wordEl.appendChild(starBtn);
+            
+            const addBtn = document.createElement('button');
+            addBtn.innerHTML = icons.plus;
+            addBtn.className = 'action-icon focus:outline-none text-white/50 hover:text-white';
+            addBtn.onclick = () => addToTray(word);
+            wordEl.appendChild(addBtn);
+
+            return wordEl;
+        }
+
+        function renderResults(results) {
+            state.generatedResults = results;
+            dom.wordsOutput.innerHTML = '';
+            if (results.length > 0) {
+                results.forEach(result => dom.wordsOutput.appendChild(createWordElement(result)));
+                dom.resultActionsContainer.classList.remove('hidden');
+            } else {
+                dom.resultActionsContainer.classList.add('hidden');
+            }
+        }
+        
+        function renderHistory() {
+            dom.historyList.innerHTML = '';
+            state.history.forEach(item => {
+                const historyEl = document.createElement('button');
+                historyEl.className = 'bg-gray-200 dark:bg-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-500 text-primary';
+                historyEl.textContent = item.theme;
+                historyEl.onclick = () => {
+                    if (item.type === 'theme') {
+                        dom.themeInput.value = item.theme;
+                        switchSubTab('theme');
+                    } else {
+                        displayMessage(`Histórico selecionado: ${item.theme}. Configure e gere novamente.`, 'info');
+                        switchSubTab('style');
+                    }
+                };
+                dom.historyList.appendChild(historyEl);
+            });
+        }
+
+        function addToHistory(theme, type) {
+            state.history = state.history.filter(item => item.theme !== theme);
+            state.history.unshift({ theme, type });
+            if (state.history.length > 5) state.history.pop();
+            saveStateForProject();
+            renderHistory();
+        }
+
+        function displayMessage(text, type = 'info') {
+            dom.messageArea.textContent = text;
+            dom.messageArea.className = `text-center h-6 mb-2 font-medium ${
+                type === 'success' ? 'text-green-600' :
+                type === 'error' ? 'text-red-600' : 'text-secondary'
+            }`;
+        }
+
+        async function handleGeneration(prompt, theme, type) {
+            if (!state.apiKey) {
+                displayMessage('Por favor, insira sua chave da API na aba "Configurações".', 'error');
+                switchTab('settings');
+                return;
+            }
+            dom.loader.classList.remove('hidden');
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+            displayMessage('');
+            renderResults([]);
+
+            try {
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${state.apiKey}`;
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    console.error('API Error:', errorResult);
+                    const errorMessage = errorResult.error?.message || `Erro na API: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    const complexTypes = ["Sinopse de 1 linha", "Descrição de Ambiente", "Gancho de Trama", "Diálogo Curto", "Item Especial"];
+                    const currentResultType = dom.resultType.value;
+                    let resultsArray;
+
+                    if (complexTypes.includes(currentResultType)) {
+                        resultsArray = [text.trim()];
+                    } else {
+                        resultsArray = text.split(/, ?|\n/).map(w => w.trim().replace(/^- /, '')).filter(w => w);
+                    }
+
+                    renderResults(resultsArray);
+                    if (resultsArray.length > 0) {
+                        displayMessage(`Resultados gerados para: ${theme}!`, 'success');
+                        if (type !== 'rhyme' && type !== 'trigger') addToHistory(theme, type);
+                    } else {
+                        displayMessage('Nenhum resultado foi gerado. Tente novamente.', 'error');
+                    }
+                } else {
+                    console.error('Unexpected API response structure:', result);
+                    let feedbackMessage = 'Resposta da API inesperada.';
+                    if (result.promptFeedback?.blockReason) {
+                        feedbackMessage = `Conteúdo bloqueado: ${result.promptFeedback.blockReason}. Tente um tema diferente.`;
+                    }
+                    throw new Error(feedbackMessage);
+                }
+            } catch (err) {
+                console.error('Error in handleGeneration:', err);
+                displayMessage(err.message || 'Ocorreu um erro. Verifique o console para detalhes.', 'error');
+            } finally {
+                dom.loader.classList.add('hidden');
+                buttons.forEach(b => b.disabled = false);
+            }
+        }
+        
+        async function generateAllTriggers() {
+            const container = dom.triggerResultsContainer;
+            const message = dom.triggerPromptMessage;
+            container.innerHTML = '';
+            dom.addTriggersToTrayBtn.classList.add('hidden');
+            
+            let theme;
+            if (state.activeSubTab === 'theme' && dom.themeInput.value.trim()) {
+                theme = dom.themeInput.value;
+            } else {
+                const selectedPresets = Array.from(document.querySelectorAll('input[name="preset"]:checked')).map(cb => cb.value);
+                if (selectedPresets.length > 0) {
+                    theme = selectedPresets.join(' + ');
+                }
+            }
+
+            if (!theme) {
+                message.textContent = 'Defina um tema na aba "Gerador" para ver os gatilhos.';
+                return;
+            }
+
+            if (!state.apiKey) {
+                message.textContent = 'Por favor, insira sua chave da API na aba "Configurações".';
+                switchTab('settings');
+                return;
+            }
+
+            message.textContent = `Gerando gatilhos para o tema: "${theme}"...`;
+            container.innerHTML = `<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>`;
+            
+            const fullPrompt = `Para o tema "${theme}", gere conteúdo para os seguintes gatilhos criativos. Formate a resposta exatamente como abaixo, usando "###" para separar cada gatilho:\n\n` +
+                Object.entries(creativeTriggers).map(([name, prompt]) => `### ${name}\n${prompt}`).join('\n\n');
+
+            try {
+                const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${state.apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    const errorMessage = errorResult.error?.message || `Erro na API: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    const sections = text.split('### ').filter(s => s.trim() !== '');
+                    
+                    let allResultsHTML = '';
+                    state.generatedTriggers = [];
+                    sections.forEach(section => {
+                        const lines = section.split('\n').filter(l => l.trim() !== '');
+                        const title = lines.shift() || 'Gatilho';
+                        const items = lines.map(item => item.replace(/^- |^\* |^\d\. /, ''));
+                        state.generatedTriggers.push(...items);
+
+                        allResultsHTML += `
+                            <div class="bg-gray-100 dark:bg-gray-700/50 p-4 rounded-lg fade-in">
+                                <h3 class="font-bold text-primary mb-2">${title}</h3>
+                                <ul class="list-disc list-inside space-y-1 text-sm text-secondary">
+                                    ${items.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = allResultsHTML;
+                    message.textContent = `Gatilhos para o tema: "${theme}"`;
+                    if(state.generatedTriggers.length > 0) dom.addTriggersToTrayBtn.classList.remove('hidden');
+                } else {
+                    let feedbackMessage = 'Resposta da API inesperada para gatilhos.';
+                    if (result.promptFeedback?.blockReason) {
+                        feedbackMessage = `Conteúdo bloqueado: ${result.promptFeedback.blockReason}. Tente um tema diferente.`;
+                    }
+                    throw new Error(feedbackMessage);
+                }
+            } catch (err) {
+                console.error(`Error fetching all triggers:`, err);
+                container.innerHTML = '';
+                message.textContent = err.message || 'Erro ao gerar gatilhos. Tente novamente.';
+            }
+        }
+
+        function generate() {
+            const numItems = dom.numItems.value;
+            const resultType = dom.resultType.value;
+            const excludeInput = document.getElementById('exclude-input').value;
+            const creativityLevels = ['focado e literal', 'criativo e balanceado', 'ousado e abstrato'];
+            const creativity = creativityLevels[dom.creativitySlider.value];
+            let theme, type;
+
+            if (state.activeSubTab === 'theme') {
+                if (!dom.themeInput.value.trim()) {
+                    displayMessage('Por favor, insira um tema.', 'error');
+                    return;
+                }
+                theme = dom.themeInput.value;
+                type = 'theme';
+            } else {
+                const selectedPresets = Array.from(document.querySelectorAll('input[name="preset"]:checked')).map(cb => cb.value);
+                if (selectedPresets.length === 0) {
+                    displayMessage('Por favor, selecione pelo menos um estilo.', 'error');
+                    return;
+                }
+                theme = selectedPresets.join(' + ');
+                type = 'preset';
+            }
+            
+            const quantityText = (resultType === "Sinopse de 1 linha" || resultType === "Gancho de Trama" || resultType === "Descrição de Ambiente" || resultType === "Diálogo Curto" || resultType === "Item Especial") ? '' : `uma lista de ${numItems}`;
+            let prompt = `Gere ${quantityText} ${resultType} sobre o tema "${theme}". Seja ${creativity}.`;
+            if (excludeInput.trim()) {
+                prompt += ` Evite estritamente qualquer palavra ou conceito relacionado a: ${excludeInput}.`;
+            }
+            if (!quantityText) {
+                 prompt += ` O resultado deve ser um único item conciso.`;
+            } else {
+                 prompt += ` Separe os itens por vírgula.`;
+            }
+            
+            handleGeneration(prompt, theme, type);
+        }
+
+        function generateRhymes() {
+            const word = dom.rhymeInput.value;
+            if (!word.trim()) {
+                displayMessage('Por favor, insira uma palavra para encontrar rimas.', 'error');
+                return;
+            }
+            const prompt = `Gere uma lista de 20 palavras que rimam com a palavra "${word}". Inclua rimas ricas e pobres. Separe as palavras por vírgula.`;
+            handleGeneration(prompt, `Rimas para "${word}"`, 'rhyme');
+        }
+        
+        function generateSurprise() {
+            document.querySelectorAll('input[name="preset"]:checked').forEach(cb => cb.checked = false);
+            const allStyles = Object.values(categorizedStyles).flatMap(cat => Object.keys(cat));
+            const numToSelect = Math.floor(Math.random() * 2) + 2;
+            let selected = [];
+            while(selected.length < numToSelect) {
+                const randomStyle = allStyles[Math.floor(Math.random() * allStyles.length)];
+                if(!selected.includes(randomStyle)) selected.push(randomStyle);
+            }
+            selected.forEach(style => {
+                const presetId = `preset-${style.replace(/\s+/g, '-')}`;
+                document.getElementById(presetId).checked = true;
+            });
+            switchSubTab('style');
+            generate();
+        }
+        
+        function copyToClipboard(wordsArray, type) {
+            if (wordsArray.length === 0) {
+                displayMessage(`Não há ${type} para copiar.`, 'error');
+                return;
+            }
+            const wordsText = wordsArray.join(', ');
+            const textArea = document.createElement('textarea');
+            textArea.value = wordsText;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                displayMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} copiados!`, 'success');
+            } catch (err) {
+                displayMessage(`Erro ao copiar ${type}.`, 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function exportToFile(contentArray, filename, mimeType = 'text/plain', extension = 'txt') {
+            if (contentArray.length === 0) return;
+            const blob = new Blob(contentArray, { type: `${mimeType};charset=utf-8` });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${filename}.${extension}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        function updateCreativityLabel() {
+            const labels = ['Focado', 'Normal', 'Ousado'];
+            dom.creativityLabel.textContent = labels[dom.creativitySlider.value];
+        }
+        
+        function renderWriterFavorites() {
+            dom.writerFavoritesList.innerHTML = '';
+            if (state.favorites.length > 0) {
+                state.favorites.forEach(word => {
+                    const favEl = document.createElement('div');
+                    favEl.textContent = word;
+                    favEl.className = 'p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 rounded cursor-grab';
+                    favEl.draggable = true;
+                    favEl.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', word);
+                    });
+                    dom.writerFavoritesList.appendChild(favEl);
+                });
+            } else {
+                dom.writerFavoritesList.innerHTML = '<p class="text-secondary text-sm italic">Seus favoritos aparecerão aqui para arrastar.</p>';
+            }
+        }
+
+        // --- Funções da Cesta de Coleta ---
+        function toggleTray() {
+            const isCollapsed = dom.collectionTray.classList.toggle('collapsed');
+            dom.toggleTrayBtn.innerHTML = isCollapsed ? icons.chevronUp : icons.chevronDown;
+        }
+
+        function addToTray(item) {
+            if (!state.collectionTray.some(i => i.text === item)) {
+                state.collectionTray.push({ id: Date.now(), text: item, category: 'Sem Categoria' });
+                renderTray();
+            }
+        }
+        
+        function addMultipleToTray(items) {
+            const newItems = items.filter(item => !state.collectionTray.some(i => i.text === item));
+            if (newItems.length > 0) {
+                newItems.forEach(item => state.collectionTray.push({ id: Date.now(), text: item, category: 'Sem Categoria' }));
+                renderTray();
+            }
+        }
+
+        function removeFromTray(id) {
+            state.collectionTray = state.collectionTray.filter(item => item.id !== id);
+            renderTray();
+        }
+
+        function clearTray() {
+            state.collectionTray = [];
+            renderTray();
+        }
+
+        function changeTrayItemCategory(id, newCategory) {
+            const item = state.collectionTray.find(i => i.id === id);
+            if (item) {
+                item.category = newCategory;
+                renderTray();
+            }
+        }
+
+        function renderTray() {
+            dom.trayContent.innerHTML = '';
+            dom.trayCount.textContent = state.collectionTray.length;
+
+            const categories = ['Sem Categoria', 'Personagem', 'Cenário', 'Trama', 'Diálogo', 'Item'];
+            const grouped = state.collectionTray.reduce((acc, item) => {
+                (acc[item.category] = acc[item.category] || []).push(item);
+                return acc;
+            }, {});
+
+            for (const category of categories) {
+                if (grouped[category]) {
+                    const categoryHeader = document.createElement('h4');
+                    categoryHeader.className = 'w-full font-bold text-primary text-sm mt-2 first:mt-0';
+                    categoryHeader.textContent = category;
+                    dom.trayContent.appendChild(categoryHeader);
+
+                    grouped[category].forEach(item => {
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'flex items-center gap-2 bg-gray-200 dark:bg-gray-700 p-2 rounded text-sm';
+                        
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = item.text;
+                        textSpan.className = 'flex-grow';
+                        itemEl.appendChild(textSpan);
+
+                        const categorySelect = document.createElement('select');
+                        categorySelect.className = 'text-xs input-bg border-color rounded ml-auto';
+                        categorySelect.dataset.id = item.id;
+                        categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat;
+                            option.textContent = cat;
+                            if (cat === item.category) option.selected = true;
+                            categorySelect.appendChild(option);
+                        });
+                        itemEl.appendChild(categorySelect);
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.innerHTML = icons.x;
+                        removeBtn.className = 'remove-tray-item-btn text-red-500 hover:text-red-400';
+                        removeBtn.dataset.id = item.id;
+                        itemEl.appendChild(removeBtn);
+                        
+                        dom.trayContent.appendChild(itemEl);
+                    });
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

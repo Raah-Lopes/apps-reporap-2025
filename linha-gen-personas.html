@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Relacionamentos de Personagens</title>
+    
+    <!-- Carrega a biblioteca de visualização de grafos -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Carrega o Tailwind CSS para um design moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Estilo para garantir que o corpo ocupe toda a altura */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro para combinar com o tema do Obsidian */
+            color: #e2e8f0;
+        }
+        #main-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+        #controls-panel {
+            width: 25%;
+            max-width: 400px;
+            min-width: 300px;
+            height: 100%;
+            background-color: #2d3748;
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        #network-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            height: 100%;
+        }
+        #network-container {
+            position: relative;
+            flex-grow: 1;
+        }
+        #network {
+            width: 100%;
+            height: 100%;
+            border-left: 1px solid #4a5568;
+        }
+        #details-panel, #edit-panel {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(100%);
+            z-index: 10;
+        }
+        #details-panel.active, #edit-panel.active {
+            transform: translateX(0);
+        }
+        /* Customizando a scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #2d3748; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="overflow-hidden">
+
+    <div id="main-container">
+        <!-- PAINEL DE CONTROLE LATERAL -->
+        <div id="controls-panel">
+            <h1 class="text-2xl font-bold text-white mb-6">Mapa de Personagens</h1>
+
+            <!-- SEÇÃO: ARQUIVO -->
+            <div class="bg-gray-700 p-4 rounded-lg mb-6">
+                <h2 class="text-lg font-semibold text-green-300 mb-3">Arquivo</h2>
+                <div class="flex space-x-2">
+                    <button id="save-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 text-sm">Salvar</button>
+                    <button id="load-btn" class="flex-1 bg-green-800 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 text-sm">Carregar</button>
+                    <input type="file" id="file-input" class="hidden" accept=".json">
+                </div>
+            </div>
+
+            <!-- SEÇÃO: LINHA DO TEMPO (ERAS) -->
+            <div class="bg-gray-700 p-4 rounded-lg mb-6">
+                <h2 class="text-lg font-semibold text-orange-300 mb-3">Linha do Tempo</h2>
+                <div class="space-y-2" id="eras-list"></div>
+                <div class="flex space-x-2 mt-3">
+                    <input type="text" id="new-era-name" placeholder="Nome da nova Era" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm">
+                    <button id="add-era-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 text-sm">Add</button>
+                </div>
+            </div>
+
+            <!-- SEÇÃO: ADICIONAR PERSONAGEM -->
+            <div class="bg-gray-700 p-4 rounded-lg mb-6">
+                <h2 class="text-lg font-semibold text-teal-300 mb-3">Adicionar Personagem</h2>
+                <div class="space-y-4">
+                    <input type="text" id="character-name" placeholder="Nome do Personagem" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <input type="text" id="character-group" placeholder="Grupo (Ex: Família, Facção)" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <select id="character-icon" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-400"></select>
+                    <button id="add-character-btn" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">Adicionar Personagem</button>
+                </div>
+            </div>
+
+            <!-- SEÇÃO: ADICIONAR RELACIONAMENTO -->
+            <div class="bg-gray-700 p-4 rounded-lg mb-6">
+                <h2 class="text-lg font-semibold text-indigo-300 mb-3">Criar Ligação</h2>
+                <div class="space-y-4">
+                    <select id="from-character" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                    <select id="to-character" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                    <select id="relationship-type" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                    <div>
+                        <label for="relationship-strength" class="block text-sm font-medium text-gray-300 mb-1">Força da Relação: <span id="strength-value">3</span></label>
+                        <input type="range" id="relationship-strength" min="1" max="5" value="3" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="mutual-relation" class="h-4 w-4 bg-gray-800 border-gray-600 rounded text-indigo-500 focus:ring-indigo-500">
+                        <label for="mutual-relation" class="ml-2 text-sm text-gray-300">Relação Mútua (sem seta)</label>
+                    </div>
+                    <button id="add-relationship-btn" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">Adicionar Ligação</button>
+                </div>
+            </div>
+            
+            <!-- SEÇÃO: FILTROS E OPÇÕES -->
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <h2 class="text-lg font-semibold text-pink-300 mb-3">Filtros e Opções</h2>
+                <div id="legend-filters" class="space-y-2 mb-4"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="reorganize-btn" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 text-sm">Reorganizar</button>
+                    <button id="export-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 text-sm">Exportar PNG</button>
+                    <button id="cluster-btn" class="col-span-2 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 text-sm">Agrupar/Desagrupar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÁREA DO GRAFO -->
+        <div id="network-wrapper">
+             <div class="p-2 bg-gray-900/50 border-l border-gray-700 flex items-center space-x-4">
+                <label for="era-selector" class="text-sm font-medium text-gray-300">Visualizando Era:</label>
+                <select id="era-selector" class="bg-gray-700 border border-gray-600 rounded-md px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-orange-400"></select>
+            </div>
+            <div id="network-container">
+                <div id="network"></div>
+                <!-- PAINÉIS LATERAIS (Detalhes, Edição) -->
+                <div id="details-panel" class="absolute top-0 right-0 h-full w-1/3 max-w-md bg-gray-800 shadow-lg p-6 border-l-2 border-teal-400">
+                    <h2 id="details-title" class="text-2xl font-bold text-teal-300 mb-4">Detalhes do Personagem</h2>
+                    <p class="text-sm text-gray-400 mb-4">Clique duplo para editar o personagem.</p>
+                    <textarea id="details-description" class="w-full h-48 bg-gray-700 border border-gray-600 rounded-md p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="Adicione uma descrição..."></textarea>
+                    <div class="mt-4 flex space-x-2">
+                        <button id="save-details-btn" class="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-md transition">Salvar Detalhes</button>
+                        <button id="close-details-btn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition">Fechar</button>
+                    </div>
+                </div>
+                <div id="edit-panel" class="absolute top-0 right-0 h-full w-1/3 max-w-md bg-gray-800 shadow-lg p-6 border-l-2 border-yellow-400">
+                    <h2 id="edit-title" class="text-2xl font-bold text-yellow-300 mb-4">Editar Item</h2>
+                    <div id="edit-node-form" class="hidden space-y-4">
+                        <input type="text" id="edit-character-name" placeholder="Nome do Personagem" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        <input type="text" id="edit-character-group" placeholder="Grupo (Ex: Família, Facção)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        <select id="edit-character-icon" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"></select>
+                        <div id="edit-node-eras" class="space-y-2"></div>
+                    </div>
+                    <div id="edit-edge-form" class="hidden space-y-4">
+                        <select id="edit-relationship-type" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"></select>
+                        <div>
+                            <label for="edit-relationship-strength" class="block text-sm font-medium text-gray-300 mb-1">Força: <span id="edit-strength-value">3</span></label>
+                            <input type="range" id="edit-relationship-strength" min="1" max="5" value="3" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="edit-mutual-relation" class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-yellow-500 focus:ring-yellow-500">
+                            <label for="edit-mutual-relation" class="ml-2 text-sm text-gray-300">Relação Mútua (sem seta)</label>
+                        </div>
+                        <div id="edit-edge-eras" class="space-y-2"></div>
+                    </div>
+                    <div class="mt-4 flex space-x-2">
+                        <button id="save-edit-btn" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md transition">Salvar Edição</button>
+                        <button id="delete-item-btn" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition">Apagar</button>
+                        <button id="close-edit-btn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAIS -->
+    <div id="notification-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md mx-auto"><p id="modal-text" class="text-white text-lg mb-5"></p><button id="modal-close-btn" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-md">OK</button></div>
+    </div>
+    
+    <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- I. SETUP & CONFIG ---
+
+        // 1. DOM Elements
+        const dom = {
+            container: document.getElementById('network'),
+            saveBtn: document.getElementById('save-btn'),
+            loadBtn: document.getElementById('load-btn'),
+            fileInput: document.getElementById('file-input'),
+            searchInput: document.getElementById('search-input'),
+            exportBtn: document.getElementById('export-btn'),
+            clusterBtn: document.getElementById('cluster-btn'),
+            eraSelector: document.getElementById('era-selector'),
+            erasList: document.getElementById('eras-list'),
+            newEraNameInput: document.getElementById('new-era-name'),
+            addEraBtn: document.getElementById('add-era-btn'),
+            relationshipStrengthInput: document.getElementById('relationship-strength'),
+            strengthValueSpan: document.getElementById('strength-value'),
+            detailsPanel: document.getElementById('details-panel'),
+            detailsTitle: document.getElementById('details-title'),
+            detailsDescription: document.getElementById('details-description'),
+            saveDetailsBtn: document.getElementById('save-details-btn'),
+            closeDetailsBtn: document.getElementById('close-details-btn'),
+            editPanel: document.getElementById('edit-panel'),
+            editTitle: document.getElementById('edit-title'),
+            editNodeForm: document.getElementById('edit-node-form'),
+            editEdgeForm: document.getElementById('edit-edge-form'),
+            saveEditBtn: document.getElementById('save-edit-btn'),
+            deleteItemBtn: document.getElementById('delete-item-btn'),
+            closeEditBtn: document.getElementById('close-edit-btn'),
+            characterIconSelect: document.getElementById('character-icon'),
+            mutualRelationCheckbox: document.getElementById('mutual-relation'),
+            fromCharacterSelect: document.getElementById('from-character'),
+            toCharacterSelect: document.getElementById('to-character'),
+            relationshipTypeSelect: document.getElementById('relationship-type'),
+            reorganizeBtn: document.getElementById('reorganize-btn'),
+            notificationModal: document.getElementById('notification-modal'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+            addCharacterBtn: document.getElementById('add-character-btn'),
+            addRelationshipBtn: document.getElementById('add-relationship-btn'),
+            editRelationshipStrengthInput: document.getElementById('edit-relationship-strength'),
+            editStrengthValueSpan: document.getElementById('edit-strength-value')
+        };
+        
+        // 2. State & Config
+        let activeNodeId = null;
+        let activeEdgeId = null;
+        let isClustered = false;
+        let eras = ['Todas'];
+        const icons = {
+            'Padrão (Ponto)': 'dot', 'Coroa': 'crown', 'Espada': 'sword',
+            'Livro': 'book', 'Escudo': 'shield', 'Caveira': 'skull'
+        };
+        const iconSVGs = {
+            crown: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path></svg>',
+            sword: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.44l-9-9a2 2 0 0 0-2.82 0l-9 9a2 2 0 0 0 0 2.82l9 9a2 2 0 0 0 2.82 0l9-9a2 2 0 0 0 0-2.82z"></path><line x1="12" y1="2" x2="12" y2="22"></line></svg>',
+            book: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
+            shield: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+            skull: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><path d="M8 20v2h8v-2"></path><path d="M12.5 17.5c-1.5-1.5-3-1.5-4.5 0"></path><path d="M16 20a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2"></path><path d="M12 2a10 10 0 1 0 10 10c0-5.52-4.48-10-10-10z"></path></svg>'
+        };
+        const relationshipTypes = ['Amigo', 'Inimigo', 'Aliado', 'Família', 'Romance', 'Conhecido', 'Rival'];
+        const colors = ['#63b3ed', '#4fd1c5', '#f6ad55', '#d53f8c', '#805ad5', '#38b2ac', '#dd6b20', '#d69e2e'];
+        let groupColors = {};
+        let colorIndex = 0;
+
+        // 3. Vis.js DataSets
+        let nodes = new vis.DataSet([]);
+        let edges = new vis.DataSet([]);
+        let nodesView = new vis.DataView(nodes);
+        let edgesView = new vis.DataView(edges);
+
+        // --- II. HELPER & UI FUNCTIONS ---
+
+        function debounce(func, delay) { let timeout; return function(...args) { const context = this; clearTimeout(timeout); timeout = setTimeout(() => func.apply(context, args), delay); }; }
+        function showNotification(message) {
+            document.getElementById('modal-text').textContent = message;
+            dom.notificationModal.classList.remove('hidden');
+            dom.notificationModal.classList.add('flex');
+        }
+        function getRelationshipStyle(type) { const t = type ? type.toLowerCase() : ''; if (t === 'amigo') return { color: '#48bb78', dashes: false }; if (t === 'família') return { color: '#63b3ed', dashes: false }; if (t === 'aliado') return { color: '#38b2ac', dashes: false }; if (t === 'romance') return { color: '#d53f8c', dashes: false }; if (t === 'inimigo') return { color: '#f56565', dashes: true }; if (t === 'rival') return { color: '#f6e05e', dashes: [5, 5] }; if (t === 'conhecido') return { color: '#a0aec0', dashes: [2, 2] }; return { color: '#a0aec0', dashes: false }; }
+        function createNode(id, label, group, iconType, description, eras) {
+            const nodeData = { id, label, group, icon: iconType, description: description || '', eras: eras || ['Todas'] };
+            if (iconType && iconType !== 'dot') {
+                const color = groupColors[group] || '#9ae6b4';
+                const svg = iconSVGs[iconType].replace('currentColor', color);
+                const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+                nodeData.shape = 'image';
+                nodeData.image = url;
+                nodeData.size = 25;
+            } else {
+                nodeData.shape = 'dot';
+            }
+            return nodeData;
+        }
+        function updateCharacterDropdowns() { 
+            const currentFrom = dom.fromCharacterSelect.value; 
+            const currentTo = dom.toCharacterSelect.value; 
+            dom.fromCharacterSelect.innerHTML = ''; 
+            dom.toCharacterSelect.innerHTML = ''; 
+            const characterList = nodes.get({ order: 'label' }); 
+            characterList.forEach(char => { 
+                dom.fromCharacterSelect.add(new Option(char.label, char.id)); 
+                dom.toCharacterSelect.add(new Option(char.label, char.id)); 
+            }); 
+            dom.fromCharacterSelect.value = currentFrom; 
+            dom.toCharacterSelect.value = currentTo; 
+        }
+        function updateLegendAndFilters() {
+            const legendContainer = document.getElementById('legend-filters');
+            legendContainer.innerHTML = '';
+            const uniqueGroups = [...new Set(nodes.get().map(item => item.group || 'Sem Grupo'))];
+            
+            uniqueGroups.forEach(group => {
+                if (!groupColors[group]) {
+                    groupColors[group] = colors[colorIndex % colors.length];
+                    colorIndex++;
+                }
+            });
+            const newGroupsOption = {};
+            uniqueGroups.forEach(group => {
+                const color = groupColors[group];
+                newGroupsOption[group] = { color: { background: color, border: color, highlight: { background: '#ffffff', border: color } }, font: { color: '#ffffff' } };
+                const filterItem = document.createElement('div');
+                filterItem.className = 'flex items-center';
+                filterItem.innerHTML = `<input type="checkbox" id="filter-${group.replace(/\s+/g, '-')}" data-group="${group}" class="h-4 w-4 bg-gray-800 border-gray-600 rounded text-pink-500 focus:ring-pink-500" checked><label for="filter-${group.replace(/\s+/g, '-')}" class="ml-2 text-sm text-gray-300 flex items-center cursor-pointer"><span class="w-3 h-3 rounded-full mr-2" style="background-color: ${color};"></span>${group}</label>`;
+                legendContainer.appendChild(filterItem);
+            });
+            network.setOptions({ groups: newGroupsOption });
+            
+            legendContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', applyFilters);
+            });
+        }
+        function applyFilters() {
+            const activeGroups = Array.from(document.querySelectorAll('#legend-filters input:checked')).map(cb => cb.dataset.group);
+            const currentEra = dom.eraSelector.value;
+            
+            nodesView.setData(nodes, {
+                filter: node => activeGroups.includes(node.group || 'Sem Grupo') && (currentEra === 'Todas' || (node.eras && node.eras.includes(currentEra)))
+            });
+            edgesView.setData(edges, {
+                filter: edge => currentEra === 'Todas' || (edge.eras && edge.eras.includes(currentEra))
+            });
+        }
+        function renderEras() {
+            dom.erasList.innerHTML = '';
+            const currentEra = dom.eraSelector.value;
+            dom.eraSelector.innerHTML = '';
+            eras.forEach(era => {
+                dom.eraSelector.add(new Option(era, era));
+                if (era !== 'Todas') {
+                    const eraEl = document.createElement('div');
+                    eraEl.className = 'flex justify-between items-center bg-gray-800 p-2 rounded';
+                    eraEl.innerHTML = `<span class="text-sm">${era}</span><button data-era="${era}" class="text-red-400 hover:text-red-200 text-xs font-bold">X</button>`;
+                    dom.erasList.appendChild(eraEl);
+                }
+            });
+            if (eras.includes(currentEra)) {
+                dom.eraSelector.value = currentEra;
+            } else {
+                dom.eraSelector.value = 'Todas';
+                applyFilters();
+            }
+            dom.erasList.querySelectorAll('button').forEach(btn => btn.addEventListener('click', deleteEra));
+        }
+        function addEra() {
+            const newEra = dom.newEraNameInput.value.trim();
+            if (newEra && !eras.includes(newEra)) {
+                eras.push(newEra);
+                renderEras();
+                dom.newEraNameInput.value = '';
+            }
+        }
+        function deleteEra(event) {
+            const eraToDelete = event.target.dataset.era;
+            eras = eras.filter(e => e !== eraToDelete);
+            nodes.forEach(node => {
+                if (node.eras && node.eras.includes(eraToDelete)) {
+                    const updatedEras = node.eras.filter(e => e !== eraToDelete);
+                    nodes.update({id: node.id, eras: updatedEras.length > 0 ? updatedEras : ['Todas']});
+                }
+            });
+            edges.forEach(edge => {
+                 if (edge.eras && edge.eras.includes(eraToDelete)) {
+                    const updatedEras = edge.eras.filter(e => e !== eraToDelete);
+                    edges.update({id: edge.id, eras: updatedEras.length > 0 ? updatedEras : ['Todas']});
+                }
+            });
+            renderEras();
+        }
+
+        // --- III. CORE LOGIC & NETWORK ---
+        
+        function addCharacter() {
+            const name = document.getElementById('character-name').value.trim();
+            if (!name) { showNotification("O nome do personagem não pode estar vazio."); return; }
+            if (nodes.get({ filter: n => n.label === name }).length > 0) { showNotification("Um personagem com este nome já existe."); return; }
+            const group = document.getElementById('character-group').value.trim() || 'Sem Grupo';
+            const icon = dom.characterIconSelect.value;
+            const currentEra = dom.eraSelector.value;
+            const initialEras = currentEra === 'Todas' ? ['Todas'] : [currentEra, 'Todas'];
+            
+            const nodeData = createNode(crypto.randomUUID(), name, group, icon, '', initialEras);
+            nodes.add(nodeData);
+
+            document.getElementById('character-name').value = '';
+            document.getElementById('character-group').value = '';
+        }
+        function addRelationship() {
+            const fromId = dom.fromCharacterSelect.value;
+            const toId = dom.toCharacterSelect.value;
+            if (!fromId || !toId || fromId === toId) { showNotification("Selecione os dois personagens."); return; }
+            const strength = parseInt(dom.relationshipStrengthInput.value, 10);
+            const type = dom.relationshipTypeSelect.value;
+            const style = getRelationshipStyle(type);
+            const currentEra = dom.eraSelector.value;
+            const initialEras = currentEra === 'Todas' ? ['Todas'] : [currentEra, 'Todas'];
+
+            edges.add({
+                from: fromId, to: toId, label: type, strength: strength, width: strength * 1.5,
+                dashes: style.dashes, color: { color: style.color }, arrows: dom.mutualRelationCheckbox.checked ? '' : 'to',
+                eras: initialEras
+            });
+        }
+        
+        const data = { nodes: nodesView, edges: edgesView };
+        const options = {
+            nodes: { shape: 'dot', size: 20, font: { size: 15, color: '#e2e8f0', background: 'rgba(26, 32, 44, 0.75)' }, borderWidth: 2 },
+            edges: { smooth: true, font: { size: 14, color: '#e2e8f0', align: 'middle', background: 'rgba(26, 32, 44, 0.75)' }, arrows: 'to' },
+            physics: { enabled: true, solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 230, springConstant: 0.18 }, stabilization: { iterations: 150 } },
+            interaction: { tooltipDelay: 200, hideEdgesOnDrag: true, navigationButtons: true },
+            groups: {},
+            manipulation: { enabled: false }
+        };
+        const network = new vis.Network(dom.container, data, options);
+
+        // --- IV. EVENT LISTENERS ---
+        
+        // Populate static dropdowns
+        Object.keys(icons).forEach(name => {
+            dom.characterIconSelect.add(new Option(name, icons[name]));
+            document.getElementById('edit-character-icon').add(new Option(name, icons[name]));
+        });
+        relationshipTypes.forEach(type => {
+            dom.relationshipTypeSelect.add(new Option(type, type));
+            document.getElementById('edit-relationship-type').add(new Option(type, type));
+        });
+
+        // Attach all event listeners
+        dom.modalCloseBtn.addEventListener('click', () => { dom.notificationModal.classList.add('hidden'); });
+        dom.addCharacterBtn.addEventListener('click', addCharacter);
+        dom.addRelationshipBtn.addEventListener('click', addRelationship);
+        dom.addEraBtn.addEventListener('click', addEra);
+        dom.eraSelector.addEventListener('change', applyFilters);
+        dom.relationshipStrengthInput.addEventListener('input', (e) => { dom.strengthValueSpan.textContent = e.target.value; });
+        dom.saveBtn.addEventListener('click', () => {
+            const mapData = {
+                nodes: nodes.get({ fields: ['id', 'label', 'group', 'icon', 'description', 'eras'] }),
+                edges: edges.get(),
+                eras: eras,
+                colors: groupColors
+            };
+            const dataStr = JSON.stringify(mapData, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'mapa_de_personagens.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showNotification('Mapa salvo com sucesso!');
+        });
+        dom.loadBtn.addEventListener('click', () => dom.fileInput.click());
+        dom.fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const mapData = JSON.parse(e.target.result);
+                    eras = mapData.eras || ['Todas'];
+                    groupColors = mapData.colors || {};
+                    colorIndex = Object.keys(groupColors).length;
+                    renderEras();
+                    dom.eraSelector.value = 'Todas';
+                    updateLegendAndFilters();
+                    const newNodes = mapData.nodes.map(n => createNode(n.id, n.label, n.group, n.icon, n.description, n.eras));
+                    nodes.clear();
+                    edges.clear();
+                    nodes.add(newNodes);
+                    edges.add(mapData.edges);
+                    network.fit();
+                    showNotification('Mapa carregado com sucesso!');
+                } catch (err) {
+                    showNotification('Erro ao carregar o arquivo. Verifique se é um JSON válido.');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+            dom.fileInput.value = '';
+        });
+        dom.exportBtn.addEventListener('click', () => {
+            const dataURL = network.canvas.getContext().canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'mapa_relacionamentos.png';
+            a.click();
+        });
+        dom.saveDetailsBtn.addEventListener('click', () => { if (activeNodeId) { nodes.update({ id: activeNodeId, description: dom.detailsDescription.value }); showNotification('Detalhes salvos!'); dom.detailsPanel.classList.remove('active'); activeNodeId = null; } });
+        dom.closeDetailsBtn.addEventListener('click', () => { dom.detailsPanel.classList.remove('active'); activeNodeId = null; });
+        dom.saveEditBtn.addEventListener('click', () => {
+            if (activeNodeId) {
+                const newLabel = document.getElementById('edit-character-name').value;
+                const newGroup = document.getElementById('edit-character-group').value;
+                const newIcon = document.getElementById('edit-character-icon').value;
+                const activeEras = Array.from(document.querySelectorAll('#edit-node-eras input:checked')).map(cb => cb.dataset.era);
+                if (activeEras.length === 0) activeEras.push('Todas'); else if (!activeEras.includes('Todas')) activeEras.push('Todas');
+                const updatedNode = createNode(activeNodeId, newLabel, newGroup, newIcon, nodes.get(activeNodeId).description, activeEras);
+                nodes.update(updatedNode);
+            } else if (activeEdgeId) {
+                const newType = document.getElementById('edit-relationship-type').value;
+                const newStrength = parseInt(dom.editRelationshipStrengthInput.value, 10);
+                const newMutual = document.getElementById('edit-mutual-relation').checked;
+                const style = getRelationshipStyle(newType);
+                const activeEras = Array.from(document.querySelectorAll('#edit-edge-eras input:checked')).map(cb => cb.dataset.era);
+                if (activeEras.length === 0) activeEras.push('Todas'); else if (!activeEras.includes('Todas')) activeEras.push('Todas');
+                edges.update({id: activeEdgeId, label: newType, strength: newStrength, width: newStrength * 1.5, dashes: style.dashes, color: { color: style.color }, arrows: newMutual ? '' : 'to', eras: activeEras });
+            }
+            dom.editPanel.classList.remove('active');
+            activeNodeId = null;
+            activeEdgeId = null;
+        });
+        dom.deleteItemBtn.addEventListener('click', () => {
+            if (activeNodeId) { nodes.remove(activeNodeId); }
+            else if (activeEdgeId) { edges.remove(activeEdgeId); }
+            dom.editPanel.classList.remove('active');
+            activeNodeId = null;
+            activeEdgeId = null;
+        });
+        dom.closeEditBtn.addEventListener('click', () => { dom.editPanel.classList.remove('active'); activeNodeId = null; activeEdgeId = null; });
+        dom.editRelationshipStrengthInput.addEventListener('input', (e) => { dom.editStrengthValueSpan.textContent = e.target.value; });
+        const debouncedUiUpdate = debounce(() => {
+            updateCharacterDropdowns();
+            updateLegendAndFilters();
+            applyFilters();
+        }, 250);
+        nodes.on('*', debouncedUiUpdate);
+        edges.on('*', debouncedUiUpdate);
+        network.on("stabilizationIterationsDone", () => network.setOptions({ physics: false }));
+        dom.reorganizeBtn.addEventListener('click', () => network.setOptions({ physics: true }));
+        window.addEventListener('resize', debounce(() => network.fit(), 250));
+        network.on('click', (params) => {
+            dom.editPanel.classList.remove('active');
+            if (params.nodes.length > 0) {
+                activeNodeId = params.nodes[0];
+                const node = nodes.get(activeNodeId);
+                dom.detailsTitle.textContent = node.label;
+                dom.detailsDescription.value = node.description || '';
+                dom.detailsPanel.classList.add('active');
+            } else {
+                dom.detailsPanel.classList.remove('active');
+                activeNodeId = null;
+            }
+        });
+        network.on("doubleClick", (params) => {
+            dom.detailsPanel.classList.remove('active');
+            if (params.nodes.length > 0) {
+                activeNodeId = params.nodes[0];
+                activeEdgeId = null;
+                const node = nodes.get(activeNodeId);
+                dom.editTitle.textContent = `Editar "${node.label}"`;
+                document.getElementById('edit-character-name').value = node.label;
+                document.getElementById('edit-character-group').value = node.group;
+                document.getElementById('edit-character-icon').value = node.icon || 'dot';
+                const erasContainer = document.getElementById('edit-node-eras');
+                erasContainer.innerHTML = '<label class="block text-sm font-medium text-gray-300">Eras Ativas:</label>';
+                eras.filter(e => e !== 'Todas').forEach(era => {
+                    const checked = node.eras && node.eras.includes(era) ? 'checked' : '';
+                    erasContainer.innerHTML += `<div class="flex items-center"><input type="checkbox" id="edit-era-${era}" data-era="${era}" class="h-4 w-4" ${checked}><label for="edit-era-${era}" class="ml-2 text-sm">${era}</label></div>`;
+                });
+                dom.editNodeForm.classList.remove('hidden');
+                dom.editEdgeForm.classList.add('hidden');
+                dom.editPanel.classList.add('active');
+            } else if (params.edges.length > 0) {
+                activeEdgeId = params.edges[0];
+                activeNodeId = null;
+                const edge = edges.get(activeEdgeId);
+                dom.editTitle.textContent = `Editar Relação`;
+                document.getElementById('edit-relationship-type').value = edge.label;
+                document.getElementById('edit-relationship-strength').value = edge.strength || 3;
+                dom.editStrengthValueSpan.textContent = edge.strength || 3;
+                document.getElementById('edit-mutual-relation').checked = !edge.arrows || edge.arrows !== 'to';
+                const erasContainer = document.getElementById('edit-edge-eras');
+                erasContainer.innerHTML = '<label class="block text-sm font-medium text-gray-300">Eras Ativas:</label>';
+                eras.filter(e => e !== 'Todas').forEach(era => {
+                    const checked = edge.eras && edge.eras.includes(era) ? 'checked' : '';
+                    erasContainer.innerHTML += `<div class="flex items-center"><input type="checkbox" id="edit-edge-era-${era}" data-era="${era}" class="h-4 w-4" ${checked}><label for="edit-edge-era-${era}" class="ml-2 text-sm">${era}</label></div>`;
+                });
+                dom.editEdgeForm.classList.remove('hidden');
+                dom.editNodeForm.classList.add('hidden');
+                dom.editPanel.classList.add('active');
+            }
+        });
+        dom.clusterBtn.addEventListener('click', () => {
+            isClustered = !isClustered;
+            if (isClustered) {
+                const allGroups = [...new Set(nodes.get({ fields: ['group'] }).map(n => n.group || 'Sem Grupo'))];
+                allGroups.forEach(group => {
+                    const nodesInGroup = nodes.get({filter: n => n.group === group});
+                    if (nodesInGroup.length > 0) {
+                         network.clusterByConnection(nodesInGroup[0].id, {
+                            joinCondition: (nodeOptions) => nodeOptions.group === group,
+                            clusterNodeProperties: { id: 'cluster:' + group, label: group, shape: 'box', color: groupColors[group] || '#aaa', allowSingleNodeCluster: true }
+                        });
+                    }
+                });
+            } else {
+                const clusterNodeIds = network.body.nodeIndices.filter(id => network.isCluster(id));
+                clusterNodeIds.forEach(id => network.openCluster(id));
+            }
+        });
+        dom.searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            if (!searchTerm) { network.fit(); return; }
+            const foundNodes = nodes.get({ filter: node => node.label.toLowerCase().includes(searchTerm) });
+            if (foundNodes.length > 0) {
+                network.focus(foundNodes[0].id, { scale: 1.5, animation: true });
+                network.selectNodes([foundNodes[0].id]);
+            }
+        });
+        
+        // --- V. INITIALIZATION ---
+        renderEras();
+        debouncedUiUpdate();
+        network.fit();
+    });
+    </script>
+</body>
+</html>

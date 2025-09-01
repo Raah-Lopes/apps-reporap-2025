@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Fichas para Obsidian v13 (Final)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a202c; --primary-color: #2dd4bf; --card-bg: #2d3748;
+            --border-color: #4a5568; --text-color: #cbd5e1; --text-muted: #94a3b8;
+        }
+        html.light {
+            --bg-color: #f1f5f9; --primary-color: #0d9488; --card-bg: #ffffff;
+            --border-color: #cbd5e1; --text-color: #334155; --text-muted: #64748b;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: background-color 0.3s, color 0.3s; }
+        .loader { border: 4px solid var(--border-color); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .markdown-preview { background-color: var(--bg-color); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border-color); height: 100%; overflow-y: auto; }
+        .markdown-preview h1, .markdown-preview h2, .markdown-preview h3 { color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 1.5rem; margin-bottom: 1rem; }
+        .markdown-preview blockquote { background-color: rgba(45, 212, 191, 0.1); border-left: 4px solid var(--primary-color); padding: 1rem; margin: 1rem 0; color: var(--text-color); }
+        .markdown-preview table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .markdown-preview th, .markdown-preview td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: left; }
+        .markdown-preview th { background-color: var(--card-bg); }
+        .markdown-preview a { color: var(--primary-color); text-decoration: none; }
+        .markdown-preview a:hover { text-decoration: underline; }
+        .markdown-preview code { background-color: var(--card-bg); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; }
+        .disabled-btn { opacity: 0.5; cursor: not-allowed; }
+        .tab-btn.active { background-color: var(--primary-color); color: white; }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6">
+
+    <div class="w-full max-w-7xl mx-auto">
+        <header class="text-center mb-8 relative">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-100 dark:text-white mb-2">Gerador de Fichas para Obsidian</h1>
+            <p class="text-slate-500 dark:text-slate-400 text-lg">Sua suíte de Worldbuilding com IA, Refinamento e Inspiração.</p>
+            <button id="theme-toggle" class="absolute top-0 right-0 p-2 rounded-full bg-slate-700 text-slate-300 hover:bg-slate-600">
+                <svg id="theme-icon-light" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="theme-icon-dark" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Coluna da Esquerda: Controles -->
+            <div class="bg-card-bg p-6 sm:p-8 rounded-2xl shadow-2xl border border-border-color flex flex-col">
+                
+                <!-- Configurações API -->
+                <div class="mb-4">
+                    <button id="toggleApiBtn" class="flex items-center justify-between w-full text-left text-sm font-medium text-slate-300 mb-2">
+                        <span>Configurações da API</span>
+                        <svg id="apiChevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform transform"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div id="apiSection" class="overflow-hidden max-h-0" style="transition: max-height 0.5s ease-in-out;">
+                        <div class="pt-2">
+                            <input type="password" id="apiKey" placeholder="Cole sua chave de API Gemini aqui" class="w-full bg-slate-900 p-3 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GERADOR DE NOMES -->
+                <div class="mb-6 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label class="block text-sm font-medium text-slate-300 mb-3">Gerador de Nomes (Bônus)</label>
+                    <div class="flex items-center gap-2">
+                        <select id="nameCategory" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option>Personagem - Fantasia Élfica</option>
+                            <option>Personagem - Fantasia Anã</option>
+                            <option>Raça - Humanoides da Floresta</option>
+                            <option>Lugar - Cidade Medieval</option>
+                            <option>Item - Espada Mágica</option>
+                            <option>Facção - Ordem Secreta</option>
+                        </select>
+                        <button id="generateNameBtn" title="Gerar Nomes" class="p-3 bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors h-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H3v7"/><path d="M11 11 3 3"/><path d="M21 13v7h-7"/><path d="m13 13 8 8"/><path d="M3 13.5a9 9 0 0 1 13-10.5"/><path d="M21 10.5a9 9 0 0 1-13 10.5"/></svg></button>
+                    </div>
+                    <div id="nameResult" class="text-xs text-slate-400 mt-3 p-2 bg-slate-800 rounded"></div>
+                </div>
+
+                <!-- Categoria -->
+                <div class="mb-6">
+                    <label for="category" class="block text-sm font-medium mb-2">1. Escolha o tipo de ficha</label>
+                    <select id="category" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <option value="Personagem">Personagem</option>
+                        <option value="Raça">Raça / Espécie</option>
+                        <option value="Monstro">Monstro / Criatura (RPG)</option>
+                        <option value="BiologiaCriatura">Biologia da Criatura</option>
+                        <option value="Item">Item / Artefato</option>
+                        <option value="Lugar">Lugar / Cidade</option>
+                        <option value="Faccao">Facção / Organização</option>
+                        <option value="SistemaMagia">Sistema de Magia</option>
+                        <option value="Universo">Universo / Mundo</option>
+                    </select>
+                </div>
+
+                <!-- Conceito -->
+                <div class="mb-6">
+                    <label for="concept" class="block text-sm font-medium mb-2">2. Descreva sua ideia</label>
+                    <div class="flex items-center gap-2">
+                        <textarea id="concept" rows="3" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Ex: Uma raça de humanoides feitos de madeira viva."></textarea>
+                        <button id="surpriseBtn" title="Surpreenda-me!" class="p-3 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors h-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H3v7"/><path d="M11 11 3 3"/><path d="M21 13v7h-7"/><path d="m13 13 8 8"/><path d="M3 13.5a9 9 0 0 1 13-10.5"/><path d="M21 10.5a9 9 0 0 1-13 10.5"/></svg></button>
+                    </div>
+                </div>
+
+                <!-- Histórico -->
+                <div id="historyContainer" class="mb-6">
+                    <label class="block text-sm font-medium text-slate-400 mb-2">Histórico de Ideias</label>
+                    <div id="historyList" class="flex flex-wrap gap-2"></div>
+                </div>
+                
+                <!-- Seção da Imagem com Abas -->
+                <div class="mb-6 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label class="block text-sm font-medium mb-3">3. Adicionar Banner (Opcional)</label>
+                    <div class="flex border-b border-slate-600 mb-3">
+                        <button class="tab-btn active text-sm py-2 px-4" data-tab="localPath">Caminho Local</button>
+                        <button class="tab-btn text-sm py-2 px-4" data-tab="upload">Upload</button>
+                        <button class="tab-btn text-sm py-2 px-4" data-tab="url">URL</button>
+                        <button class="tab-btn text-sm py-2 px-4" data-tab="ai">Gerar com IA</button>
+                    </div>
+                    <div id="localPathContent" class="tab-content">
+                        <input type="text" id="localPathInput" placeholder="ANEXOS/Banners/minha-imagem.png" class="w-full bg-slate-700 p-3 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div id="uploadContent" class="tab-content hidden">
+                        <button id="uploadBtn" class="w-full text-center bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-3 rounded-md text-sm transition-colors">Carregar do Dispositivo</button>
+                        <input type="file" id="imageUpload" class="hidden" accept="image/*">
+                    </div>
+                    <div id="urlContent" class="tab-content hidden">
+                        <input type="text" id="imageUrl" placeholder="https://exemplo.com/imagem.jpg" class="w-full bg-slate-700 p-3 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div id="aiContent" class="tab-content hidden">
+                        <div class="flex items-center gap-2">
+                           <input type="text" id="aiImagePrompt" placeholder="Descreva a imagem..." class="w-full bg-slate-700 p-3 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                           <button id="generateImageBtn" class="p-3 bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors h-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wand-2"><path d="m3 21 1.65-1.65a2.82 2.82 0 1 1 4 4L3 21"/><path d="m21 3-1.65 1.65a2.82 2.82 0 1 0-4 4L21 3"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center mt-4">
+                       <img id="imagePreview" src="https://placehold.co/200x100/2d3748/4a5568?text=Pr%C3%A9via" alt="Prévia da imagem" class="max-h-24 w-auto rounded-md object-cover border border-slate-600">
+                       <p id="imageStatus" class="text-xs text-slate-400 mt-2 text-center"></p>
+                    </div>
+                </div>
+
+                <!-- Botão Gerar -->
+                <div class="flex items-center justify-center mt-auto">
+                    <button id="generateBtn" class="flex items-center justify-center w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2v0a10 10 0 0 0-1.08 19.92v0a10 10 0 0 0 1.08.08h0a10 10 0 0 0 1.08-19.92v0a10 10 0 0 0-1.08-.08h0Z"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><path d="M12 12s2-4 6-4"/><path d="m6 12 6-4"/><path d="m12 18 6-4"/><path d="M6 12s2 4 6 4"/></svg>
+                        Gerar Ficha
+                    </button>
+                </div>
+            </div>
+
+            <!-- Coluna da Direita: Saída e Prévia -->
+            <div class="flex flex-col gap-8">
+                <div class="bg-card-bg p-6 rounded-2xl shadow-2xl border border-border-color flex flex-col h-full">
+                    <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
+                        <h3 class="text-lg font-semibold">Código Markdown</h3>
+                        <div class="flex items-center space-x-2">
+                            <button id="copyBtn" title="Copiar código" class="bg-slate-600 hover:bg-slate-500 text-white p-2 rounded-md text-sm transition-colors disabled-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+                            <button id="saveMdBtn" title="Salvar Ficha (.md)" class="bg-slate-600 hover:bg-slate-500 text-white p-2 rounded-md text-sm transition-colors disabled-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button>
+                            <button id="saveZipBtn" title="Salvar com Imagem (.zip)" class="bg-teal-600 hover:bg-teal-500 text-white p-2 rounded-md text-sm transition-colors flex items-center disabled-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Salvar (.zip)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative flex-grow">
+                        <div id="loader" class="hidden absolute inset-0 bg-slate-800/80 flex flex-col items-center justify-center z-10 rounded-lg text-center">
+                            <div class="loader"></div>
+                            <p id="loader-text" class="mt-4 font-semibold">Forjando sua criação na IA...</p>
+                        </div>
+                        <textarea id="output" class="w-full h-full min-h-[200px] p-4 bg-slate-900 border border-slate-600 rounded-lg text-slate-300 font-mono text-sm resize-none" placeholder="O código Markdown gerado aparecerá aqui..."></textarea>
+                    </div>
+                </div>
+                <div class="bg-card-bg p-6 rounded-2xl shadow-2xl border border-border-color flex flex-col h-full">
+                    <h3 class="text-lg font-semibold mb-2">Prévia e Aprimoramento</h3>
+                    <div id="preview" class="markdown-preview flex-grow min-h-[200px] mb-4">
+                        <p class="text-muted">A pré-visualização da ficha aparecerá aqui...</p>
+                    </div>
+                    <!-- Seção de Refinamento -->
+                    <div id="refineSection" class="mt-auto pt-4 border-t border-border-color">
+                         <label for="refineInput" class="block text-sm font-medium mb-2">Aprimorar Resultado</label>
+                         <div class="flex items-center gap-2">
+                             <input type="text" id="refineInput" placeholder="Ex: Torne o personagem mais sombrio..." class="w-full bg-slate-700 p-3 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled-btn" disabled>
+                             <button id="refineBtn" class="p-3 bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled-btn" disabled><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                         </div>
+                    </div>
+                    <!-- Seção de Fichas Vinculadas -->
+                    <div id="linkedConcepts" class="mt-4 pt-4 border-t border-border-color hidden">
+                        <label class="block text-sm font-medium mb-2">Fichas Vinculadas</label>
+                        <div id="linkedConceptsList" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Seção de Recursos -->
+        <div class="mt-8 bg-card-bg p-6 sm:p-8 rounded-2xl shadow-2xl border border-border-color">
+            <h3 class="text-lg font-semibold mb-4">Recursos para Obsidian</h3>
+            <p class="text-sm text-muted mb-4">Para que os callouts coloridos da ficha de Biologia funcionem, baixe este arquivo e adicione-o aos seus snippets de CSS no Obsidian.</p>
+            <button id="downloadCssBtn" class="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-4 rounded-md text-sm transition-colors flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Baixar CSS dos Callouts
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- ELEMENTOS DA UI ---
+            const allElements = {
+                apiKeyInput: document.getElementById('apiKey'),
+                categorySelect: document.getElementById('category'),
+                conceptInput: document.getElementById('concept'),
+                surpriseBtn: document.getElementById('surpriseBtn'),
+                historyList: document.getElementById('historyList'),
+                imageUrlInput: document.getElementById('imageUrl'),
+                imageUploadInput: document.getElementById('imageUpload'),
+                uploadBtn: document.getElementById('uploadBtn'),
+                localPathInput: document.getElementById('localPathInput'),
+                imagePreview: document.getElementById('imagePreview'),
+                imageStatus: document.getElementById('imageStatus'),
+                generateBtn: document.getElementById('generateBtn'),
+                generateNameBtn: document.getElementById('generateNameBtn'),
+                nameCategory: document.getElementById('nameCategory'),
+                nameResult: document.getElementById('nameResult'),
+                generateImageBtn: document.getElementById('generateImageBtn'),
+                aiImagePrompt: document.getElementById('aiImagePrompt'),
+                outputTextarea: document.getElementById('output'),
+                copyBtn: document.getElementById('copyBtn'),
+                saveMdBtn: document.getElementById('saveMdBtn'),
+                saveZipBtn: document.getElementById('saveZipBtn'),
+                loader: document.getElementById('loader'),
+                loaderText: document.getElementById('loader-text'),
+                toggleApiBtn: document.getElementById('toggleApiBtn'),
+                apiSection: document.getElementById('apiSection'),
+                apiChevron: document.getElementById('apiChevron'),
+                previewDiv: document.getElementById('preview'),
+                refineInput: document.getElementById('refineInput'),
+                refineBtn: document.getElementById('refineBtn'),
+                linkedConcepts: document.getElementById('linkedConcepts'),
+                linkedConceptsList: document.getElementById('linkedConceptsList'),
+                themeToggle: document.getElementById('theme-toggle'),
+                themeIconLight: document.getElementById('theme-icon-light'),
+                themeIconDark: document.getElementById('theme-icon-dark'),
+                downloadCssBtn: document.getElementById('downloadCssBtn'),
+            };
+
+            let selectedImageFile = null;
+            const converter = new showdown.Converter({tables: true, strikethrough: true, tasklists: true, literalMidWordUnderscores: true});
+
+            // --- INICIALIZAÇÃO ---
+            allElements.apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+            allElements.apiKeyInput.addEventListener('change', () => { localStorage.setItem('geminiApiKey', allElements.apiKeyInput.value); });
+            
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.classList.toggle('light', savedTheme === 'light');
+            allElements.themeIconLight.classList.toggle('hidden', savedTheme !== 'light');
+            allElements.themeIconDark.classList.toggle('hidden', savedTheme === 'light');
+            
+            allElements.toggleApiBtn.addEventListener('click', () => {
+                const isHidden = allElements.apiSection.style.maxHeight === '0px' || !allElements.apiSection.style.maxHeight;
+                allElements.apiSection.style.maxHeight = isHidden ? allElements.apiSection.scrollHeight + "px" : '0px';
+                allElements.apiChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            });
+
+            updateSaveButtonsState();
+            renderHistory();
+
+            // --- LÓGICA DE ABAS DE IMAGEM ---
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    tabContents.forEach(content => content.classList.add('hidden'));
+                    document.getElementById(button.dataset.tab + 'Content').classList.remove('hidden');
+                    if (button.dataset.tab !== 'localPath') allElements.localPathInput.value = '';
+                    if (button.dataset.tab !== 'upload') { allElements.imageUploadInput.value = ''; selectedImageFile = null; }
+                    if (button.dataset.tab !== 'url') allElements.imageUrlInput.value = '';
+                    if (button.dataset.tab !== 'ai') allElements.aiImagePrompt.value = '';
+                    updateImageStatus();
+                });
+            });
+
+            // --- LÓGICA DE IMAGEM ---
+            allElements.uploadBtn.addEventListener('click', () => allElements.imageUploadInput.click());
+            allElements.imageUploadInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    selectedImageFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (e) => { allElements.imagePreview.src = e.target.result; };
+                    reader.readAsDataURL(file);
+                    updateImageStatus();
+                }
+            });
+            allElements.imageUrlInput.addEventListener('input', updateImageStatus);
+            allElements.localPathInput.addEventListener('input', updateImageStatus);
+            allElements.aiImagePrompt.addEventListener('input', updateImageStatus);
+
+            function updateImageStatus() {
+                const localPath = allElements.localPathInput.value.trim();
+                const url = allElements.imageUrlInput.value.trim();
+                if (localPath) {
+                    allElements.imagePreview.src = 'https://placehold.co/200x100/2d3748/4a5568?text=Caminho+Local';
+                    allElements.imageStatus.textContent = `Caminho: ${localPath}`;
+                } else if (selectedImageFile) {
+                    allElements.imageStatus.textContent = `Arquivo: ${selectedImageFile.name}`;
+                } else if (url) {
+                    allElements.imagePreview.src = url;
+                    allElements.imageStatus.textContent = 'Usando imagem da URL.';
+                } else {
+                    allElements.imagePreview.src = 'https://placehold.co/200x100/2d3748/4a5568?text=Pr%C3%A9via';
+                    allElements.imageStatus.textContent = '';
+                }
+            }
+            
+            // --- TEMPLATES ---
+            const templates = {
+            'Personagem': `---
+tags: personagem
+universo: "[[NOME DO UNIVERSO]]"
+faccao: "[[Nome da Facção]]"
+especie: 
+ocupacao: 
+status: Vivo
+idade: 
+aliases: []
+imagem: CAMINHO/PARA/IMAGEM.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f9d1
+---
+
+> [!infobox]
+> ## NOME DO PERSONAGEM
+> ![[CAMINHO/PARA/IMAGEM.png|300]]
+> > *"Citação que define o personagem."*
+>
+> | | |
+> | :--- | :--- |
+> | **Espécie** | PREENCHER |
+> | **Ocupação** | PREENCHER |
+> | **Facção** | [[Nome da Facção]] |
+> | **Status** | Vivo |
+
+---
+
+> [!abstract] 📜 Perfil Psicológico e Resumo
+> *(Parágrafo que descreve a essência do personagem: seu principal conflito interno, suas motivações e como ele é percebido pelos outros.)*
+
+> [!example] ✨ Aparência e Expressão
+> *(Descrição visual detalhada: altura, constituição, marcas distintivas, estilo de vestimenta e voz.)*
+
+> [!info] 🏛️ Histórico e Passado
+> *(Os eventos mais marcantes da vida do personagem que o moldaram. Infância, eventos traumáticos, grandes conquistas e arrependimentos.)*
+
+> [!bug] 🤝 Relações e Conexões
+> *(Descreva aqui as relações mais importantes que não são automáticas.)*
+>
+> | Nome | Natureza da Relação |
+> |---|---|
+> | [[Nome do Mentor]] | Mentor e figura paterna |
+> | [[Nome do Rival]] | Rivalidade amigável, mas intensa |
+
+> [!tip] ⚔️ Habilidades e Fraquezas
+> *(Descreva o estilo de combate, habilidades principais (mágicas ou não) e as vulnerabilidades mais significativas.)*
+
+> [!question] 🌐 Painel de Automação
+> > [!success]- 🎒 Inventário
+> > *(Lista automaticamente todos os itens que este personagem possui)*
+> > \`\`\`dataview
+> > TABLE tipo, raridade FROM #item WHERE dono_atual = this.file.link
+> > \`\`\`
+
+> [!tip] ✏️ Notas do Criador
+> *(Inspirações, função na trama, arco narrativo planejado.)*`,
+            'Raça': `---
+tags: raca
+universo: "[[NOME DO UNIVERSO]]"
+habitat_tipico: "[[Nome do Lugar]]"
+longevidade_media: 
+afinidade_magica: 
+imagem: CAMINHO/PARA/IMAGEM.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f9d1-200d-1f9b2
+---
+
+> [!infobox]
+> ## NOME DA RAÇA
+> ![[CAMINHO/PARA/IMAGEM.png|300]]
+> > *"Um provérbio ou dito popular que define a raça."*
+>
+> | | |
+> | :--- | :--- |
+> | **Habitat Típico** | \`$= dv.current().habitat_tipico\` |
+> | **Longevidade Média** | PREENCHER |
+> | **Afinidade Mágica** | PREENCHER |
+
+---
+
+> [!abstract] 📜 Conceito e Origem
+> *(Descrição geral da raça, sua essência e sua história de origem, seja ela mítica ou factual.)*
+
+> [!example] ✨ Fisiologia e Aparência
+> *(Características físicas distintas, altura média, cores de pele/pelo/escamas, ciclo de vida, dieta e outras particularidades biológicas.)*
+
+> [!tip] ⚔️ Habilidades e Aptidões
+> *(Habilidades inatas, talentos naturais, resistências ou vulnerabilidades. Quais são suas forças e fraquezas como povo?)*
+
+> [!info] 🏛️ Cultura e Sociedade
+> *(Estrutura social (clãs, castas, etc.), valores, costumes, tradições, arte, arquitetura e relação com outras raças.)*
+
+> [!question] 🌐 Painel de Automação
+> > [!todo]- Membros Notáveis
+> > *(Lista automaticamente personagens desta raça)*
+> > \`\`\`dataview
+> > TABLE ocupacao as "Ocupação", status as "Status"
+> > FROM #personagem WHERE especie = this.file.link
+> > \`\`\`
+
+> [!tip] ✏️ Notas do Criador
+> *(Inspirações do mundo real ou da ficção, e o papel que esta raça desempenha na sua história.)*`,
+            'Monstro': `---
+tags: criatura
+universo: "[[NOME DO UNIVERSO]]"
+categoria: Besta
+nivel_ameaca: Médio
+inteligencia: Animalesca
+habitat_primario: "[[Nome do Lugar]]"
+dieta: Carnívoro
+comportamento_social: Solitário
+imagem: CAMINHO/PARA/IMAGEM.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f479
+---
+
+> [!infobox]
+> ## NOME DO MONSTRO
+> ![[CAMINHO/PARA/IMAGEM.png|400]]
+> > *"Conceito: Um predador que caça através dos sonhos."*
+>
+> | | |
+> | :--- | :--- |
+> | **Ameaça** | Médio |
+> | **Habitat** | [[Nome do Lugar]] |
+> | **Inteligência** | Animalesca |
+
+---
+
+> [!abstract] 📜 Ecologia e Comportamento
+> *(Descrição de como a criatura vive, caça, se reproduz e interage com seu ambiente. Qual seu papel no ecossistema?)*
+
+> [!example] 👁️ Fisiologia e Aparência
+> *(Descrição visual detalhada, incluindo tamanho, sentidos especiais, e quaisquer características anatômicas únicas.)*
+
+> [!bug] ⚔️ Habilidades e Combate
+> **Pontos Fortes:** _(Resistências, imunidades, habilidades especiais)_
+> **Vulnerabilidades:** _(Fraquezas a elementos, materiais como prata, ou sons específicos)_
+> **Táticas:** _(Prefere emboscadas, ataques em grupo, táticas de guerrilha?)_
+
+> [!success] 💎 Recursos e Utilidades
+> *(Que partes da criatura são valiosas? Usadas em alquimia, criação de itens, etc.)*
+>
+> | Parte do Corpo | Utilidade |
+> |---|---|
+> | Veneno | Ingrediente para [[Poção da Paralisia]] |
+> | Couro | Material para [[Armadura Silenciosa]] |
+
+> [!warning] 🎯 Ganchos de Aventura
+> > - *Um alquimista precisa do coração da criatura para curar uma praga.*
+> > - *A criatura está bloqueando uma passagem vital para uma missão.*
+
+> [!tip] ✏️ Notas do Criador
+> *(Inspirações (mitologia, animais reais), e propósito na história.)*`,
+            'BiologiaCriatura': `---
+tags: biologia, criatura
+universo: "[[NOME DO UNIVERSO]]"
+nome_cientifico: 
+reino: 
+filo: 
+classe: 
+ordem: 
+familia: 
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f9a0
+---
+
+> [!infobox]
+> ## Biologia de NOME DA CRIATURA
+> ![[IMAGEM_DA_CRIATURA.png|400]]
+> > *"Uma breve citação ou descrição poética sobre a criatura."*
+
+> [!bio-taxon] Classificação Biológica & Taxonomia
+> - **Reino:** \`$= dv.current().reino\`
+> - **Filo:** \`$= dv.current().filo\`
+> - **Classe:** \`$= dv.current().classe\`
+> - **Ordem:** \`$= dv.current().ordem\`
+> - **Família:** \`$= dv.current().familia\`
+> - **Gênero:** \`$= dv.current().nome_cientifico.split(" ")[0]\`
+> - **Espécie:** \`$= dv.current().nome_cientifico.split(" ")[1]\`
+
+> [!bio-habitat] Habitat e Distribuição
+> - **Biomas Principais:** [[Floresta Sussurrante]]
+> - **Micro-habitat:** (Ex: Copa das árvores, cavernas subterrâneas)
+> - **Condições Ambientais:** (Faixa de temperatura, umidade, altitude)
+
+> [!bio-physio] Morfologia e Fisiologia
+> - **Aparência Geral:** (Descrição narrativa da aparência)
+> - **Tamanho e Peso:** (Altura/Comprimento, Envergadura, Peso)
+> - **Dimorfismo Sexual:** (Diferenças entre machos e fêmeas)
+> - **Anatomia Distintiva:** (Asas, garras, cauda peçonhenta)
+> - **Metabolismo:** (Rápido, lento, necessidade calórica)
+> - **Sentidos:** (Visão, audição, olfato, sentidos extra-sensoriais)
+
+> [!bio-social] Comportamento (Etologia)
+> - **Ciclo de Vida:** (Gestação, estágios de vida, longevidade)
+> - **Dieta e Hábitos Alimentares:** (O que come, como caça)
+> - **Estrutura Social:** (Solitário, bandos, colônias)
+> - **Rituais:** (Acasalamento, caça em grupo)
+
+> [!bio-eco] Ecologia e Relações Interespécies
+> - **Papel no Ecossistema:** (Predador de topo, espécie-chave, polinizador)
+> - **Predadores Naturais:** [[Criatura Predadora]]
+> - **Presas Principais:** [[Criatura Presa]]
+> - **Simbioses:** (Relações com outras espécies)
+
+> [!tip] Notas do Criador
+> *(Inspiração, relação com a trama, etc.)*`,
+            'Item': `---
+tags: item
+universo: "[[NOME DO UNIVERSO]]"
+tipo: Arma
+raridade: Raro
+dono_atual: "[[Nome do Personagem]]"
+criador: "[[Nome do Criador]]"
+imagem: CAMINHO/PARA/IMAGEM.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//2694-fe0f
+---
+
+> [!infobox]
+> ## NOME DO ITEM
+> ![[CAMINHO/PARA/IMAGEM.png|300]]
+> > *"Citação, som ou sensação associada ao item."*
+>
+> | | |
+> | :--- | :--- |
+> | **Tipo** | Arma |
+> | **Raridade**| Raro |
+> | **Dono Atual** | [[Nome do Personagem]] |
+
+---
+
+> [!abstract] 📜 Aparência e Descrição Geral
+> *(Descrição detalhada da aparência, materiais, runas, e qualquer aura ou efeito visual que o item possua.)*
+
+> [!info] 🏛️ História e Origem
+> *(Quem criou este item e por quê? Esteve envolvido em eventos históricos importantes como a [[Nome da Batalha Famosa]]?)*
+
+> [!example] ✨ Propriedades e Efeitos
+> > [!todo]- Efeitos Mágicos
+> > *(Descreva aqui as habilidades especiais, encantamentos e poderes do item. Seja específico sobre como ativar, número de cargas, etc.)*
+>
+> > [!todo]- Especificações de Arma
+> > **Tipo de Dano:** _(Corte, Fogo, Gelo, Psíquico...)_
+> > **Efeitos Especiais:** _(Brilha perto de inimigos, causa lentidão...)_
+
+> [!warning] ✋ Requisitos e Maldições
+> *(Quem pode usar este item? Requer sintonia, uma linhagem específica, ou tem algum efeito colateral negativo?)*
+
+> [!tip] ✏️ Notas do Criador
+> *(Inspiração e papel do item na trama.)*`,
+            'Lugar': `---
+tag: lugar
+universo: "[[NOME DO UNIVERSO]]"
+tipo: Cidade
+regiao: "[[NOME DA REGIÃO]]"
+lider: "[[Nome do Líder]]"
+populacao_aprox: 
+status: Ativo
+imagem: CAMINHO/PARA/IMAGEM.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f3d9-fe0f
+---
+
+> [!infobox]
+> ## NOME DO LUGAR
+> ![[CAMINHO/PARA/IMAGEM.png|400]]
+> > *Uma breve citação ou descrição poética sobre o lugar.*
+> 
+> | | |
+> | :--- | :--- |
+> | **Localização** | [[NOME DA REGIÃO]] |
+> | **Tipo** | Cidade |
+> | **Líder(es)** | [[Nome do Líder]] |
+> | **População** | PREENCHER |
+
+---
+
+> [!abstract] 📜 Descrição Geral
+> *(Descreva a atmosfera, o clima, a arquitetura e as primeiras impressões. Qual é o cheiro no ar? Quais sons são predominantes?)*
+
+> [!info] 🏛️ História
+> *(Quais eventos definiram este lugar? Como foi sua fundação e evolução? Houve grandes batalhas, descobertas ou catástrofes?)*
+
+> [!example] 📍 Pontos de Interesse
+> > [!todo]- **Nome da Taverna Famosa**
+> > *(Descrição. Ex: A "Poção Risonha", conhecida por vender ingredientes raros. Proprietário: [[Nome do PNJ]])*
+> 
+> > [!todo]- **Nome do Templo Principal**
+> > *(Descrição. Ex: A Praça do Sol, onde ocorrem os festivais.)*
+
+> [!warning] 🤫 Segredos e Ganchos de Aventura
+> > - *Rumor 1: Dizem que o fundador da cidade não morreu, mas está adormecido em uma câmara secreta sob o castelo...*
+> > - *Gancho: Um item crucial para uma missão só pode ser encontrado nas catacumbas esquecidas desta cidade.*
+
+> [!tip] ✏️ Notas do Criador
+> *(Espaço para suas ideias e inspirações sobre este lugar.)*`,
+            'Faccao': `---
+tags: faccao
+universo: "[[NOME DO UNIVERSO]]"
+tipo: Guilda
+lider: "[[Nome do Líder]]"
+sede: "[[Nome da Sede]]"
+status: Ativa
+ideologia: "Ordem através do conhecimento."
+simbolo: CAMINHO/PARA/SIMBOLO.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f91d
+---
+
+> [!infobox]
+> ## NOME DA FACÇÃO
+> ![[CAMINHO/PARA/SIMBOLO.png|150]]
+> > *"Citação, lema ou juramento da facção"*
+> 
+> | | |
+> | :--- | :--- |
+> | **Líder** | [[Nome do Líder]] |
+> | **Sede** | [[Nome da Sede]] |
+> | **Tipo** | Guilda |
+> | **Ideologia**| Ordem através do conhecimento. |
+
+---
+
+> [!abstract] 📜 Visão Geral e Doutrina
+> *(Descreva a essência da facção. Qual é sua missão principal? Quais são seus objetivos públicos e secretos?)*
+
+> [!info] 🏛️ História e Origem
+> *(Como, quando e por que a facção foi fundada? Quais foram os eventos mais marcantes em sua história?)*
+
+> [!example] 📈 Hierarquia e Recrutamento
+> *(Qual é a estrutura de poder? Descreva os diferentes postos e títulos. Como a facção recruta novos membros?)*
+
+> [!question] 🌐 Painel de Automação
+> > [!todo]- Membros Notáveis
+> > \`\`\`dataview
+> > TABLE ocupacao as "Ocupação", status as "Status"
+> > FROM #personagem WHERE faccao = this.file.link
+> > \`\`\`
+
+> [!tip] ✏️ Notas do Criador
+> *(Seu espaço para ideias e inspirações sobre a facção.)*`,
+            'SistemaMagia': `---
+tags: sistema-magia
+universo: "[[NOME DO UNIVERSO]]"
+origem: Arcana, Divina, Psíquica, Elemental
+acessibilidade: Rara, Incomum, Comum
+custo: Mana, Vigor, Sanidade, Sacrifício
+imagem: CAMINHO/PARA/IMAGEM.png
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//2728
+---
+
+> [!infobox]
+> ## NOME DO SISTEMA DE MAGIA
+> ![[CAMINHO/PARA/IMAGEM.png|300]]
+> > *"Uma lei ou princípio fundamental que rege esta magia."*
+>
+> | | |
+> | :--- | :--- |
+> | **Origem** | PREENCHER |
+> | **Acessibilidade** | PREENCHER |
+> | **Custo** | PREENCHER |
+
+---
+
+> [!abstract] 📜 Conceito Central
+> *(Qual é a essência deste sistema de magia? Como ela se manifesta e qual é sua reputação no mundo?)*
+
+> [!example] ✨ Leis e Mecânicas
+> *(Quais são as regras imutáveis? O que a magia pode e não pode fazer? Como os usuários canalizam seu poder (gestos, palavras, foco)?)*
+
+> [!tip] ⚔️ Aplicações e Escolas
+> *(Quais são os ramos ou especializações desta magia (ex: elemental, cura, ilusão)? Como ela é usada no dia a dia, em combate ou em rituais?)*
+
+> [!info] 🏛️ História e Sociedade
+> *(Como a magia foi descoberta? Qual seu impacto na história e na estrutura da sociedade? Magos são temidos, reverenciados ou caçados?)*
+
+> [!question] 🌐 Painel de Automação
+> > [!todo]- Conjuradores Notáveis
+> > *(Lista automaticamente personagens que usam este sistema)*
+> > \`\`\`dataview
+> > TABLE ocupacao as "Ocupação", status as "Status"
+> > FROM #personagem WHERE contains(habilidades, this.file.link)
+> > \`\`\`
+
+> [!tip] ✏️ Notas do Criador
+> *(Inspirações e o papel temático que a magia desempenha na sua história.)*`,
+            'Universo': `---
+tags: universo
+genero: Alta Fantasia
+nivel_magia: Alto
+nivel_tecnologia: Baixo
+leis_fundamentais:
+  - "A magia flui de linhas ley que cruzam o mundo."
+  - "A morte não é o fim; as almas reencarnam."
+banner: CAMINHO/PARA/BANNER.webp
+sticker: emoji//1f30c
+---
+
+> [!infobox]
+> ## NOME DO UNIVERSO
+> ![[IMAGEM_DO_UNIVERSO.png|400]]
+> > *"Citação representativa ou lema do universo"*
+>
+> | | |
+> | :--- | :--- |
+> | **Gênero** | Alta Fantasia |
+> | **Nível de Magia** | Alto |
+> | **Nível de Tecnologia** | Baixo |
+
+---
+
+> [!abstract] 🔭 Conceito Central
+> *(Qual é a "grande ideia" ou o "e se..." do seu universo? Descreva em um ou dois parágrafos o que torna este mundo único e fascinante.)*
+
+> [!note] ✨ Leis da Realidade
+> *(Expanda as leis fundamentais listadas nas propriedades. Como a física e a magia funcionam?)*
+
+> [!info] 🏛️ Cosmologia e Criação
+> *(Como o universo foi criado? Existem deuses, entidades cósmicas ou forças primordiais?)*
+
+> [!question] 🌐 Painel de Automação
+> > [!success]- Locais Importantes
+> > \`\`\`dataview
+> > TABLE tipo, regiao FROM #lugar WHERE universo = this.file.link
+> > \`\`\`
+> > [!todo]- Personagens Notáveis
+> > \`\`\`dataview
+> > TABLE ocupacao, faccao FROM #personagem WHERE universo = this.file.link
+> > \`\`\`
+
+> [!tip] ✏️ Notas do Criador
+> *(Suas principais inspirações e temas a serem explorados.)*`
+        };
+
+            // --- FUNÇÕES PRINCIPAIS ---
+            function updatePreview(markdownText) {
+                if (!markdownText) {
+                    allElements.previewDiv.innerHTML = '<p class="text-muted">A pré-visualização da ficha aparecerá aqui...</p>';
+                    return;
+                }
+                let processedText = markdownText.replace(/!\[\[.*?\]\]/g, (match) => {
+                    const imageName = match.slice(3, -2).split('|')[0];
+                    return `[Imagem: ${imageName}]`;
+                });
+                allElements.previewDiv.innerHTML = converter.makeHtml(processedText);
+                updateLinkedConcepts();
+            }
+
+            function updateSaveButtonsState() {
+                const hasContent = allElements.outputTextarea.value.trim().length > 0;
+                [allElements.copyBtn, allElements.saveMdBtn, allElements.saveZipBtn, allElements.refineInput, allElements.refineBtn].forEach(el => {
+                    el.disabled = !hasContent;
+                    el.classList.toggle('disabled-btn', !hasContent);
+                });
+            }
+
+            async function callGeminiAPI(prompt, isImage = false) {
+                const apiKey = allElements.apiKeyInput.value.trim();
+                if (!apiKey) throw new Error("Por favor, insira sua chave de API na seção 'Configurações da API'.");
+                
+                if (isImage) {
+                    const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                     if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`Erro na API de imagem: ${errorData.error.message}`);
+                    }
+                    const result = await response.json();
+                    if (result.predictions && result.predictions[0] && result.predictions[0].bytesBase64Encoded) {
+                        return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    } else {
+                        throw new Error("Resposta da API de imagem em formato inesperado.");
+                    }
+                } else {
+                    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                    const payload = { contents: chatHistory };
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`Erro na API: ${errorData.error.message}`);
+                    }
+                    const result = await response.json();
+                    if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0].text) {
+                        return result.candidates[0].content.parts[0].text.replace(/\\`\\`\\`/g, '```');
+                    } else {
+                        throw new Error("A resposta da API estava vazia ou em um formato inesperado.");
+                    }
+                }
+            }
+
+            async function generateContent(isRefinement = false, originalText = '') {
+                const concept = allElements.conceptInput.value.trim();
+                const refineInstruction = allElements.refineInput.value.trim();
+                if (!concept && !isRefinement) {
+                    alert("Por favor, descreva sua ideia ou conceito.");
+                    return;
+                }
+                if (isRefinement && !refineInstruction) {
+                    alert("Por favor, insira uma instrução para aprimorar a ficha.");
+                    return;
+                }
+
+                allElements.loader.classList.remove('hidden');
+                allElements.loaderText.textContent = isRefinement ? "Refinando com a IA..." : "Forjando sua criação na IA...";
+                allElements.generateBtn.disabled = true;
+                allElements.generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                if (!isRefinement) {
+                    allElements.outputTextarea.value = '';
+                    updatePreview('');
+                }
+                updateSaveButtonsState();
+
+                try {
+                    let prompt;
+                    if (isRefinement) {
+                        prompt = `Você é um editor de worldbuilding. Abaixo está uma ficha em formato markdown para Obsidian. Sua tarefa é reescrever e aprimorar esta ficha com base na seguinte instrução: "${refineInstruction}".\n\nResponda APENAS com o texto completo da ficha atualizada, mantendo a formatação markdown original intacta.\n\nFicha Original:\n${originalText}`;
+                    } else {
+                        const category = allElements.categorySelect.value;
+                        const template = templates[category];
+                        const bannerPath = allElements.localPathInput.value.trim() || 'ANEXOS/banner.webp';
+                        const finalTemplate = template.replace(/banner:.*?\n/, `banner: "${bannerPath}"\n`);
+                        prompt = `Você é um assistente de worldbuilding para o software Obsidian. Sua tarefa é criar o conteúdo para uma ficha de '${category}' baseada no seguinte conceito: '${concept}'. Preencha TODAS as seções do template abaixo em português do Brasil. Seja criativo, detalhado e consistente. Onde encontrar "[[Nome...]]" ou "CAMINHO/PARA/...", substitua por nomes e caminhos de arquivo criativos e apropriados. Onde encontrar "PREENCHER", adicione a informação correspondente. Substitua o título principal (ex: "NOME DO PERSONAGEM") pelo nome que você criar. Mantenha a formatação markdown intacta. Template:\n${finalTemplate}`;
+                    }
+                    
+                    const text = await callGeminiAPI(prompt);
+                    allElements.outputTextarea.value = text;
+                    updatePreview(text);
+
+                    if (!isRefinement) {
+                        saveToHistory(concept);
+                        renderHistory();
+                    } else {
+                        allElements.refineInput.value = '';
+                    }
+
+                } catch (error) {
+                    const errorMessage = `Ocorreu um erro: ${error.message}.`;
+                    allElements.outputTextarea.value = errorMessage;
+                    updatePreview(errorMessage);
+                } finally {
+                    allElements.loader.classList.add('hidden');
+                    allElements.generateBtn.disabled = false;
+                    allElements.generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    updateSaveButtonsState();
+                }
+            }
+            
+            // --- FUNÇÕES DE UTILIDADE ---
+            function getFilename() {
+                const content = allElements.outputTextarea.value;
+                if (!content) return "ficha-gerada";
+                const titleMatch = content.match(/^> \[!infobox\]\n> ## (.*)/m);
+                return (titleMatch && titleMatch[1]) ? titleMatch[1].trim().replace(/[<>:"/\\|?*]/g, '') : "ficha-gerada";
+            }
+
+            function copyToClipboard() {
+                if (allElements.copyBtn.disabled) return;
+                navigator.clipboard.writeText(allElements.outputTextarea.value).then(() => {
+                    const originalContent = allElements.copyBtn.innerHTML;
+                    allElements.copyBtn.innerHTML = 'Copiado!';
+                    allElements.copyBtn.classList.add('bg-green-500');
+                    setTimeout(() => {
+                        allElements.copyBtn.innerHTML = originalContent;
+                        allElements.copyBtn.classList.remove('bg-green-500');
+                    }, 2000);
+                }).catch(err => console.error('Falha ao copiar texto: ', err));
+            }
+
+            function saveAsMarkdown() {
+                if (allElements.saveMdBtn.disabled) return;
+                const content = allElements.outputTextarea.value;
+                const filename = getFilename() + ".md";
+                const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            async function getImageBlob() {
+                if (selectedImageFile) {
+                    return selectedImageFile;
+                }
+                const imageUrl = allElements.imageUrlInput.value.trim();
+                if (imageUrl) {
+                    try {
+                        const response = await fetch(imageUrl);
+                        if (!response.ok) throw new Error(`Não foi possível buscar a imagem. Status: ${response.status}`);
+                        return await response.blob();
+                    } catch (e) {
+                         console.error("Fetch error:", e);
+                         throw new Error("Não foi possível baixar a imagem da URL devido a restrições de segurança (CORS). Tente usar outra imagem ou carregue-a do seu dispositivo.");
+                    }
+                }
+                return null;
+            }
+
+            async function saveAsZip() {
+                if (allElements.saveZipBtn.disabled) return;
+                
+                const imageBlob = await getImageBlob().catch(err => {
+                    alert(err.message);
+                    return null;
+                });
+
+                if (!imageBlob) {
+                    alert("Por favor, selecione uma imagem (por Upload ou URL) para usar esta função.");
+                    return;
+                }
+
+                allElements.loader.classList.remove('hidden');
+                allElements.loaderText.textContent = "Convertendo imagem para .webp...";
+                
+                try {
+                    const webpBlob = await new Promise((resolve, reject) => {
+                        const image = new Image();
+                        image.crossOrigin = "Anonymous";
+                        image.src = URL.createObjectURL(imageBlob);
+                        image.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = image.width;
+                            canvas.height = image.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(image, 0, 0);
+                            canvas.toBlob(resolve, 'image/webp', 0.9);
+                            URL.revokeObjectURL(image.src);
+                        };
+                        image.onerror = () => reject(new Error("Erro ao carregar a imagem para conversão."));
+                    });
+
+                    if (!webpBlob) throw new Error("A conversão para WebP falhou.");
+
+                    allElements.loaderText.textContent = "Criando arquivo .zip...";
+                    const zip = new JSZip();
+                    const filename = getFilename();
+                    
+                    zip.folder("ANEXOS").file("banner.webp", webpBlob);
+                    zip.file(filename + ".md", allElements.outputTextarea.value);
+
+                    const zipContent = await zip.generateAsync({type:"blob"});
+                    const url = URL.createObjectURL(zipContent);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename + ".zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                } catch (error) {
+                    console.error("Erro ao criar .zip:", error);
+                    alert(`Ocorreu um erro ao processar a imagem: ${error.message}`);
+                } finally {
+                    allElements.loader.classList.add('hidden');
+                }
+            }
+
+            function saveToHistory(concept) {
+                let history = JSON.parse(localStorage.getItem('generationHistory')) || [];
+                if (!history.includes(concept)) {
+                    history.unshift(concept);
+                }
+                history = history.slice(0, 5);
+                localStorage.setItem('generationHistory', JSON.stringify(history));
+            }
+
+            function renderHistory() {
+                const history = JSON.parse(localStorage.getItem('generationHistory')) || [];
+                allElements.historyList.innerHTML = '';
+                if (history.length === 0) {
+                    allElements.historyList.innerHTML = '<p class="text-xs text-slate-500">Seu histórico aparecerá aqui.</p>';
+                } else {
+                    history.forEach(concept => {
+                        const btn = document.createElement('button');
+                        btn.className = 'text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-md transition-colors';
+                        btn.textContent = concept.length > 30 ? concept.substring(0, 27) + '...' : concept;
+                        btn.title = concept;
+                        btn.onclick = () => { allElements.conceptInput.value = concept; };
+                        allElements.historyList.appendChild(btn);
+                    });
+                }
+            }
+
+            function surpriseMe() {
+                const ideas = {
+                    Personagem: ["Um bibliotecário que secretamente protege um livro que pode reescrever a realidade.", "Uma pirata ciborgue em busca das peças perdidas de sua memória.", "Um mago que só consegue usar magia quando está bêbado.", "O último elfo de uma floresta petrificada.", "Um detetive que resolve crimes usando a magia de ler as emoções de objetos."],
+                    Raça: ["Uma raça de humanoides feitos de madeira viva que se comunicam através do crescimento de flores.", "Um povo subterrâneo com pele bioluminescente que cultiva cristais como alimento.", "Nômades do deserto que podem se transformar em areia para viajar com o vento.", "Uma espécie anfíbia que constrói cidades de coral e vidro vulcânico no fundo do mar."],
+                    Monstro: ["Uma criatura feita de espelhos quebrados que reflete os medos de quem a encara.", "Um golem de vinhas que protege uma ruína antiga, e só pode ser acalmado com música.", "Um leviatã etéreo que nada através do plano astral, caçando pesadelos.", "Pequenos dragões de fuligem que vivem em chaminés e cospem brasas.", "Um fungo senciente que se comunica através de esporos alucinógenos."],
+                    BiologiaCriatura: ["A biologia de um 'Golem de Coral', detalhando como ele se regenera usando pólipos e sua simbiose com peixes elétricos.", "O ciclo de vida de uma 'Fênix de Gelo', que renasce de uma geada em vez de chamas.", "A anatomia de um 'Grifo das Sombras', explicando como suas penas absorvem a luz e sua dieta de medo solidificado."],
+                    Item: ["Uma bússola que não aponta para o norte, mas para o que seu portador mais deseja.", "Uma armadura forjada com o silêncio de uma montanha, que anula todo o som ao redor.", "Uma pena que escreve eventos futuros, mas consome as memórias de quem a usa.", "Um baralho de cartas que pode invocar ilusões do que é desenhado nelas.", "Uma poção que permite respirar memórias em vez de ar."],
+                    Lugar: ["Uma cidade construída nas costas de uma tartaruga colossal que viaja pelos oceanos.", "Um mercado flutuante em um mar de nuvens, onde se vende mercadorias de todos os planos.", "Uma biblioteca subterrânea onde os livros são feitos de cristal e lidos pela luz das estrelas.", "Um reino onde as estações do ano mudam de acordo com o humor da rainha.", "Uma masmorra que se reconfigura a cada nascer do sol."],
+                    Faccao: ["Uma guilda de assassinos que só matam pessoas que já morreram em outras linhas do tempo.", "Uma ordem de monges que arquivam os sons do universo em conchas místicas.", "Um cartel de contrabandistas que usam navios voadores movidos a emoções engarrafadas.", "Uma sociedade secreta de magos que busca apagar a magia do mundo para protegê-lo.", "Os 'Restauradores', um grupo que viaja consertando paradoxos temporais."],
+                    SistemaMagia: ["Um sistema de magia baseado em tatuagens rúnicas que se ativam com o sangue do usuário.", "Magia que só funciona através da manipulação de sons e música.", "Um sistema onde a magia é um parasita que concede poder em troca de força vital.", "Magia extraída de emoções engarrafadas, onde fúria gera fogo e tristeza gera gelo."],
+                    Universo: ["Um mundo onde a gravidade é seletiva e cada raça é afetada de forma diferente.", "Um universo contido dentro de uma única e gigantesca árvore cósmica.", "Um sistema solar onde os planetas são os corpos de deuses adormecidos.", "Um mundo onde as palavras têm poder literal, e uma promessa quebrada pode ter consequências físicas.", "Uma realidade onde todos os seres vivos são feitos de vidro e podem se estilhaçar."]
+                };
+                const categories = Object.keys(ideas);
+                const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+                const randomIdeas = ideas[randomCategory];
+                const randomConcept = randomIdeas[Math.floor(Math.random() * randomIdeas.length)];
+
+                allElements.categorySelect.value = randomCategory;
+                allElements.conceptInput.value = randomConcept;
+            }
+
+            async function generateNames() {
+                const category = allElements.nameCategory.value;
+                allElements.nameResult.innerHTML = 'Gerando nomes...';
+                try {
+                    const prompt = `Gere uma lista de 5 nomes criativos para a seguinte categoria de worldbuilding: "${category}". Responda apenas com os nomes, separados por vírgula.`;
+                    const namesText = await callGeminiAPI(prompt);
+                    allElements.nameResult.innerHTML = namesText.split(',').map(name => `<span class="inline-block bg-slate-700 px-2 py-1 rounded-md m-0.5 cursor-pointer hover:bg-slate-600">${name.trim()}</span>`).join('');
+                    allElements.nameResult.querySelectorAll('span').forEach(span => {
+                        span.addEventListener('click', () => {
+                            navigator.clipboard.writeText(span.textContent).then(() => {
+                                const originalName = span.title;
+                                span.textContent = 'Copiado!';
+                                setTimeout(() => { span.textContent = originalName; }, 1000);
+                            });
+                            span.title = span.textContent;
+                        });
+                    });
+                } catch (e) {
+                    allElements.nameResult.innerHTML = `<span class="text-red-400">Erro: ${e.message}</span>`;
+                }
+            }
+
+            function updateLinkedConcepts() {
+                const content = allElements.outputTextarea.value;
+                const links = [...content.matchAll(/\[\[(.*?)\]\]/g)];
+                const uniqueLinks = [...new Set(links.map(match => match[1]))];
+
+                if (uniqueLinks.length > 0) {
+                    allElements.linkedConcepts.classList.remove('hidden');
+                    allElements.linkedConceptsList.innerHTML = '';
+                    uniqueLinks.forEach(linkText => {
+                        const btn = document.createElement('button');
+                        btn.className = 'text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-md transition-colors';
+                        btn.textContent = linkText;
+                        btn.onclick = () => {
+                            allElements.conceptInput.value = `Crie uma ficha para "${linkText}".`;
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            allElements.conceptInput.focus();
+                        };
+                        allElements.linkedConceptsList.appendChild(btn);
+                    });
+                } else {
+                    allElements.linkedConcepts.classList.add('hidden');
+                }
+            }
+
+            function downloadCss() {
+                const cssContent = `
+/* --- Snippet para Callouts de Biologia --- */
+.callout[data-callout^="bio-"] {
+    border-radius: 8px;
+    border-left-width: 5px;
+    padding-top: 1em;
+}
+.callout[data-callout="bio-taxon"] {
+    --callout-color: 82, 146, 222; /* Azul */
+    --callout-icon: url('data:image/svg+xml;utf8,<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/><path d="M12 12V8"/></svg>');
+}
+.callout[data-callout="bio-habitat"] {
+    --callout-color: 104, 166, 104; /* Verde */
+    --callout-icon: url('data:image/svg+xml;utf8,<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mountain"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>');
+}
+.callout[data-callout="bio-physio"] {
+    --callout-color: 204, 133, 96; /* Laranja */
+    --callout-icon: url('data:image/svg+xml;utf8,<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-dna"><path d="M2 15c6.667-6 13.333 0 20-6"/><path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"/><path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"/><path d="M11.5 14.5c-4.667-4-4.667-10-1-10"/><path d="M12.5 9.5c4.667 4 4.667 10 1 10"/><path d="M18 4c2 2 2 5 2 5"/><path d="M6 20c-2-2-2-5-2-5"/></svg>');
+}
+.callout[data-callout="bio-social"] {
+    --callout-color: 173, 138, 207; /* Roxo */
+    --callout-icon: url('data:image/svg+xml;utf8,<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>');
+}
+.callout[data-callout="bio-eco"] {
+    --callout-color: 218, 187, 104; /* Amarelo */
+    --callout-icon: url('data:image/svg+xml;utf8,<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-leaf"><path d="M11 20A7 7 0 0 1 4 13q0-3.5 2.6-5.22A3.5 3.5 0 0 1 11 2q4 0 6.9 2.4T22 10a3 3 0 0 1-3 3 1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1 3 3 0 0 1-3-3 1 1 0 0 0-1-1z"/></svg>');
+}
+`;
+                const blob = new Blob([cssContent.trim()], { type: 'text/css;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'bio-callouts.css';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            // --- EVENT LISTENERS ---
+            allElements.generateBtn.addEventListener('click', () => generateContent(false));
+            allElements.refineBtn.addEventListener('click', () => generateContent(true, allElements.outputTextarea.value));
+            allElements.copyBtn.addEventListener('click', copyToClipboard);
+            allElements.saveMdBtn.addEventListener('click', saveAsMarkdown);
+            allElements.saveZipBtn.addEventListener('click', saveAsZip);
+            allElements.surpriseBtn.addEventListener('click', surpriseMe);
+            allElements.generateNameBtn.addEventListener('click', generateNames);
+            allElements.downloadCssBtn.addEventListener('click', downloadCss);
+            allElements.themeToggle.addEventListener('click', () => {
+                const isLight = document.documentElement.classList.toggle('light');
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                allElements.themeIconLight.classList.toggle('hidden', !isLight);
+                allElements.themeIconDark.classList.toggle('hidden', isLight);
+            });
+            allElements.generateImageBtn.addEventListener('click', async () => {
+                const prompt = allElements.aiImagePrompt.value.trim();
+                if(!prompt) {
+                    alert("Por favor, descreva a imagem que você quer gerar.");
+                    return;
+                }
+                
+                allElements.loader.classList.remove('hidden');
+                allElements.loaderText.textContent = "Gerando imagem com IA...";
+                
+                try {
+                    const imageUrl = await callGeminiAPI(prompt, true);
+                    allElements.imagePreview.src = imageUrl;
+                    
+                    const fetchRes = await fetch(imageUrl);
+                    selectedImageFile = await fetchRes.blob();
+                    allElements.imageUrlInput.value = '';
+                    allElements.localPathInput.value = '';
+                    allElements.imageStatus.textContent = "Imagem gerada pela IA.";
+
+                } catch (error) {
+                    alert(`Erro ao gerar imagem: ${error.message}`);
+                } finally {
+                    allElements.loader.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

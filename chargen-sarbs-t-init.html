@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CharGen Sarbs T</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta de Cores e Estilos Globais */
+        :root { /* Dark Theme (Default) */
+            --bg-main: #12181B;
+            --bg-ui-main: #2A3439;
+            --bg-ui-secondary: #12181B;
+            --bg-ui-secondary-rgb: 18, 24, 27;
+            --text-main: #FEFBF6;
+            --text-secondary: #a8a29e;
+            --border-color: #2A3439;
+            --accent-main: #00F6ED;
+            --accent-main-hover: #00d1cb;
+            --accent-secondary: #FFD700;
+            --accent-destructive: #b91c1c;
+            --accent-destructive-hover: #991b1b;
+        }
+
+        .theme-light {
+            --bg-main: #FEFBF6;
+            --bg-ui-main: #FFFFFF;
+            --bg-ui-secondary: #F0EBE0;
+            --bg-ui-secondary-rgb: 240, 235, 224;
+            --text-main: #4B0082;
+            --text-secondary: #6a1a9e;
+            --border-color: #d1c4e9;
+            --accent-main: #FFD700;
+            --accent-main-hover: #e6c200;
+            --accent-secondary: #4B0082;
+            --accent-destructive: #ef4444;
+            --accent-destructive-hover: #dc2626;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-ui-main); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--accent-main); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-main-hover); }
+        
+        /* Estilos para Acordeões e Seções */
+        .accordion-content, .main-section-content { 
+            transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out, opacity 0.3s ease-in-out;
+            overflow: hidden; max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; 
+        }
+        .accordion-content.open, .main-section-content.open { 
+            max-height: 2500px; opacity: 1; padding-top: 1rem; padding-bottom: 1rem;
+        }
+        
+        .selected-item { background-color: var(--accent-main) !important; color: var(--bg-main) !important; font-weight: 600; }
+
+        /* Estilos de Formulário */
+        select, input, textarea {
+            background-color: var(--bg-ui-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0.5rem; width: 100%; padding: 0.75rem 1rem; min-height: 48px;
+        }
+        select:focus, input:focus, textarea:focus { 
+            border-color: var(--accent-main); 
+            box-shadow: 0 0 0 2px var(--accent-main); 
+            outline: none; 
+        }
+
+        /* Componentes UI */
+        .loader {
+            border: 4px solid #e5e5e5; border-top: 4px solid var(--accent-green-light); border-radius: 50%;
+            width: 24px; height: 24px; animation: spin 1s linear infinite;
+        }
+        .small-loader { border-width: 3px; width: 18px; height: 18px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .ai-suggestion-btn {
+            padding: 0.3rem; margin-left: 0.5rem; background-color: var(--accent-main); color: var(--bg-main);
+            border-radius: 0.375rem; font-size: 0.75rem; line-height: 1; display: inline-flex; align-items: center;
+        }
+        .ai-suggestion-btn:hover { background-color: var(--accent-main-hover); }
+        
+        .section-arrow { transition: transform 0.3s ease; }
+        .active .section-arrow { transform: rotate(180deg); }
+
+        /* Layout Responsivo */
+        #sidebar { transition: transform 0.3s ease-in-out; }
+        #rascunhoSidebar { transition: transform 0.3s ease-in-out; z-index: 60; }
+        #openRascunhoBtn { z-index: 55; transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; }
+        #openRascunhoBtn.hidden { opacity: 0; visibility: hidden; }
+
+        /* Tooltips */
+        .tooltip { position: relative; display: inline-block; width: 100%; }
+        .tooltip .tooltip-text {
+            visibility: hidden; width: 220px; background-color: var(--bg-ui-main); color: #fff;
+            text-align: center; border-radius: 6px; padding: 8px; position: absolute;
+            z-index: 10; bottom: 125%; left: 50%; margin-left: -110px; opacity: 0;
+            transition: opacity 0.3s; font-size: 0.8rem; border: 1px solid var(--border-color);
+        }
+        .tooltip .tooltip-text::after {
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; 
+            border-width: 5px; border-style: solid; border-color: var(--bg-ui-main) transparent transparent transparent;
+        }
+        .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+        /* Theme Overrides for Tailwind */
+        .bg-ui-main { background-color: var(--bg-ui-main) !important; }
+        .bg-emerald-600 { background-color: var(--accent-main) !important; }
+        .hover\:bg-emerald-700:hover { background-color: var(--accent-main-hover) !important; }
+        .text-emerald-300 { color: var(--accent-secondary) !important; }
+        .text-emerald-400 { color: var(--accent-main) !important; }
+        .text-emerald-600 { color: var(--accent-secondary) !important; }
+        .bg-red-700 { background-color: var(--accent-destructive) !important; }
+        .hover\:bg-red-800:hover { background-color: var(--accent-destructive-hover) !important; }
+        .focus\:ring-emerald-500:focus { --tw-ring-color: var(--accent-main) !important; }
+        .bg-stone-800 { background-color: var(--bg-ui-main) !important; }
+        .border-stone-700 { border-color: var(--border-color) !important; }
+        .bg-stone-900 { background-color: var(--bg-ui-secondary) !important; }
+        .text-stone-200 { color: var(--text-main) !important; }
+        .text-stone-300 { color: var(--text-main) !important; font-weight: 300; }
+        .text-stone-400 { color: var(--text-secondary) !important; }
+        .text-stone-500 { color: var(--text-secondary) !important; }
+        .hover\:bg-stone-700:hover { background-color: var(--bg-ui-secondary) !important; }
+        .hover\:bg-stone-700\/50:hover { background-color: rgba(var(--bg-ui-secondary-rgb), 0.5) !important; }
+        .bg-green-700 { background-color: var(--accent-main) !important; }
+        .hover\:bg-green-800:hover { background-color: var(--accent-main-hover) !important; }
+        .bg-teal-700 { background-color: var(--accent-main) !important; }
+        .hover\:bg-teal-800:hover { background-color: var(--accent-main-hover) !important; }
+        .bg-lime-600 { background-color: var(--accent-secondary) !important; }
+        .hover\:bg-lime-700:hover { background-color: var(--accent-main-hover) !important; }
+        .bg-amber-500 { background-color: var(--accent-secondary) !important; }
+        .hover\:bg-amber-600:hover { background-color: var(--accent-main-hover) !important; }
+        .bg-cyan-700 { background-color: var(--accent-main) !important; }
+        .hover\:bg-cyan-800:hover { background-color: var(--accent-main-hover) !important; }
+        .bg-green-600 { background-color: var(--accent-main) !important; }
+        .hover\:bg-green-700:hover { background-color: var(--accent-main-hover) !important; }
+        .text-teal-400 { color: var(--accent-main) !important; }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <!-- Botão e Sidebar de Rascunho -->
+    <button id="openRascunhoBtn" class="fixed top-1/2 right-0 transform -translate-y-1/2 bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-l-lg shadow-lg" aria-label="Abrir rascunho de ideias">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+    </button>
+    <div id="rascunhoSidebar" class="fixed top-0 right-0 h-full w-full sm:w-80 md:w-96 bg-stone-800 shadow-xl transform translate-x-full p-4 flex flex-col border-l border-stone-700">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-orbitron text-lg text-emerald-300">Rascunho de Ideias</h3>
+            <button id="closeRascunhoBtn" class="text-stone-300 hover:text-white p-1 rounded-md hover:bg-stone-700" aria-label="Fechar rascunho de ideias">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        <textarea id="rascunhoTextarea" class="w-full flex-grow p-2 bg-stone-900 border-stone-700 rounded-md text-stone-200 text-sm mb-4 resize-none" placeholder="Digite ou gere ideias aqui..."></textarea>
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <button id="addRascunhoToPromptBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-3 rounded-lg text-sm">Adicionar ao Prompt</button>
+            <button id="clearRascunhoBtn" class="flex-1 bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-3 rounded-lg text-sm">Limpar Rascunho</button>
+        </div>
+    </div>
+
+    <!-- Header Principal -->
+    <header class="flex justify-between items-center mb-6 pb-4 border-b border-stone-700">
+        <h1 class="font-orbitron text-2xl md:text-3xl font-bold text-emerald-400">CharGen <span class="text-emerald-600">Sarbs T</span></h1>
+        <div class="flex items-center space-x-2">
+            <button id="theme-switcher" class="p-2 rounded-md hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Alternar tema">
+                <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            </button>
+            <button id="settings-btn" class="p-2 rounded-md hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Abrir configurações">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
+            <button id="hamburger-btn" class="p-2 rounded-md hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 md:hidden" aria-label="Abrir menu de categorias">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="md:grid md:grid-cols-12 md:gap-8">
+        
+        <!-- Sidebar de Categorias -->
+        <aside id="sidebar" class="md:col-span-4 lg:col-span-3 fixed md:relative top-0 left-0 h-full w-80 md:w-auto bg-stone-900 md:bg-transparent shadow-xl md:shadow-none transform -translate-x-full md:translate-x-0 z-40 p-4 md:p-0">
+            <div class="flex justify-between items-center mb-4 pb-4 border-b border-stone-700 md:hidden">
+                 <h2 class="font-orbitron text-xl text-emerald-300">Categorias</h2>
+                 <button id="close-sidebar-btn" class="p-2 rounded-md hover:bg-stone-700" aria-label="Fechar menu de categorias">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                 </button>
+            </div>
+            <div class="h-full overflow-y-auto pr-2 pb-40">
+                 <form id="characterForm">
+                     <div id="categories-container" class="space-y-2">
+                         <!-- Categorias serão inseridas aqui dinamicamente -->
+                     </div>
+                 </form>
+            </div>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="md:col-span-8 lg:col-span-9 space-y-4 pb-40">
+            
+            <!-- Seção de Análise por IA -->
+            <div class="bg-stone-800 rounded-lg shadow-xl">
+                <button class="main-section-header w-full p-4 flex justify-between items-center text-left hover:bg-stone-700/50 transition-colors rounded-lg" aria-expanded="false">
+                    <h2 class="font-orbitron text-xl text-emerald-300 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 text-emerald-400"><path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0S8.505 4.5 8.25 4.5m5.625 4.5H18a2.25 2.25 0 0 1 2.25 2.25v3.75a2.25 2.25 0 0 1-2.25 2.25H13.875m0 0A2.25 2.25 0 0 1 11.625 15h-1.5a2.25 2.25 0 0 1-2.25-2.25V8.625c0-.621.504-1.125 1.125-1.125h1.5a2.25 2.25 0 0 1 2.25 2.25Z" /></svg>
+                        Análise com IA
+                    </h2>
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 section-arrow text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                <div class="main-section-content px-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="imageUpload" class="block text-sm font-medium text-stone-300 mb-1">Upload de Imagem (PNG, JPG, WEBP - max 4MB)</label>
+                            <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/webp" class="w-full text-sm text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer">
+                            <div id="imagePreviewContainer" class="mt-4 w-full h-48 bg-stone-700 rounded-lg flex items-center justify-center overflow-hidden mx-auto">
+                                <img id="imagePreview" src="#" alt="Pré-visualização da Imagem" class="hidden max-h-full max-w-full object-contain">
+                                <span id="imagePreviewPlaceholder" class="text-stone-500">Pré-visualização</span>
+                            </div>
+                            <button id="analyzeImageBtn" class="mt-2 w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center text-sm">Analisar Imagem <div id="analyzeLoader" class="loader small-loader ml-3 hidden"></div></button>
+                            <p class="text-xs text-stone-500 mt-1 text-center">(Requer uma chave de API do Google Gemini nas configurações)</p>
+                        </div>
+                        <div>
+                            <label for="analyzeTxtFileInput" class="block text-sm font-medium text-stone-300 mb-1">Upload de Texto (.txt)</label>
+                            <input type="file" id="analyzeTxtFileInput" class="w-full text-sm text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer">
+                             <div class="mt-4 w-full h-48 bg-stone-700 rounded-lg flex items-center justify-center overflow-hidden mx-auto p-2">
+                                 <p class="text-stone-500 text-center text-sm">A IA pode analisar uma descrição textual e preencher os campos do formulário.</p>
+                             </div>
+                            <button id="analyzeTxtAndFillBtn" class="mt-2 w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center text-sm">Analisar Texto <div id="analyzeTxtLoader" class="loader small-loader ml-3 hidden"></div></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção do Prompt Final -->
+            <div class="bg-stone-800 rounded-lg shadow-xl">
+                <button class="main-section-header w-full p-4 flex justify-between items-center text-left hover:bg-stone-700/50 transition-colors rounded-lg" aria-expanded="false">
+                    <h2 class="font-orbitron text-xl text-emerald-300 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 text-emerald-400"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        Seu Prompt Final
+                    </h2>
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 section-arrow text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                <div class="main-section-content px-4">
+                    <textarea id="generatedPrompt" rows="8" class="w-full p-3 bg-stone-900 border-stone-700 rounded-lg text-stone-200 text-sm" placeholder="Selecione as opções na barra lateral, use a IA para gerar detalhes e clique em 'Gerar Prompt'..."></textarea>
+                    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        <button id="generateCompactPromptBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg shadow-xl transition-transform hover:scale-105 text-sm">Gerar Compacto</button>
+                        <button id="generateDetailedPromptBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 rounded-lg shadow-xl transition-transform hover:scale-105 text-sm">Gerar Detalhado</button>
+                        <button id="copyPromptBtn" class="w-full bg-lime-600 hover:bg-lime-700 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">Copiar</button>
+                        <button id="randomizeAllBtn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">Aleatorizar</button>
+                        <button id="clearAllBtn" class="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">Limpar Tudo</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Geração de Imagem -->
+            <div class="bg-stone-800 rounded-lg shadow-xl">
+                 <button class="main-section-header w-full p-4 flex justify-between items-center text-left hover:bg-stone-700/50 transition-colors rounded-lg" aria-expanded="false">
+                    <h2 class="font-orbitron text-xl text-emerald-300 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 text-teal-400"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
+                        Pré-visualização da Imagem por IA
+                    </h2>
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 section-arrow text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                <div class="main-section-content px-4">
+                    <div class="flex flex-col items-center">
+                        <button id="generateImagePreviewBtn" class="w-full md:w-2/3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg shadow-xl transition-transform hover:scale-105 mb-4 flex items-center justify-center">
+                            Gerar Imagem do Personagem com IA
+                            <div id="imageGenLoader" class="loader ml-3 hidden"></div>
+                        </button>
+                        <div id="generatedImageContainer" class="w-full md:w-96 h-96 bg-stone-700 rounded-lg flex items-center justify-center overflow-hidden">
+                            <img id="generatedImagePreview" src="#" alt="Imagem Gerada pela IA" class="hidden max-h-full max-w-full object-contain">
+                            <span id="generatedImagePlaceholder" class="text-stone-500">A imagem gerada aparecerá aqui...</span>
+                        </div>
+                        <p class="text-xs text-stone-400 mt-2 text-center">Utiliza o "Prompt Final" para gerar a imagem.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Seção de Gerenciamento -->
+            <div class="bg-stone-800 rounded-lg shadow-xl">
+                 <button class="main-section-header w-full p-4 flex justify-between items-center text-left hover:bg-stone-700/50 transition-colors rounded-lg" aria-expanded="false">
+                    <h2 class="font-orbitron text-xl text-emerald-300 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 text-teal-400">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" />
+                        </svg>
+                        Gerenciamento
+                    </h2>
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 section-arrow text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                <div class="main-section-content px-4">
+                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col space-y-2">
+                            <label class="block text-sm font-medium text-stone-300 mb-1">Salvar/Carregar</label>
+                            <button id="saveCharacterBtn" class="w-full bg-cyan-700 hover:bg-cyan-800 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">Salvar Ficha (.json)</button>
+                            <button id="loadCharacterBtn" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">Carregar Ficha (.json)</button>
+                            <input type="file" id="loadCharacterFileInput" class="hidden" accept=".json,.txt">
+                        </div>
+                         <div>
+                            <label for="presets" class="block text-sm font-medium text-stone-300 mb-1">Presets</label>
+                            <select id="presets" name="presets" class="w-full p-2 mb-2"></select>
+                            <button id="applyPresetBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">Aplicar Preset</button>
+                        </div>
+                     </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notificação Toast -->
+    <div id="toast-notification" class="fixed bottom-5 right-5 bg-emerald-600 text-white py-3 px-6 rounded-lg shadow-xl text-sm z-50 transition-all duration-300 opacity-0 transform translate-y-10" role="alert" aria-live="assertive"></div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-ui-main p-6 rounded-lg shadow-xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-orbitron">Configurações de API</h2>
+                <button id="close-settings-btn" class="text-text-main text-2xl leading-none hover:text-accent-main">&times;</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="text-api-provider" class="block text-sm font-medium text-text-secondary mb-1">Provedor de IA de Texto</label>
+                    <select id="text-api-provider" name="text-api-provider" class="w-full">
+                        <option value="google">Google Gemini</option>
+                        <option value="huggingface">Hugging Face</option>
+                    </select>
+                </div>
+                <div id="google-api-key-container">
+                    <label for="google-api-key" class="block text-sm font-medium text-text-secondary mb-1">Chave de API do Google Gemini</label>
+                    <input type="password" id="google-api-key" class="w-full" placeholder="Cole sua chave aqui">
+                </div>
+                <div id="huggingface-api-key-container" class="hidden space-y-4">
+                    <div>
+                        <label for="huggingface-api-key" class="block text-sm font-medium text-text-secondary mb-1">Token de Acesso do Hugging Face</label>
+                        <input type="password" id="huggingface-api-key" class="w-full" placeholder="Cole seu token (hf_...) aqui">
+                        <p class="text-xs text-stone-500 mt-1">Encontre seu token nas configurações do seu perfil no Hugging Face.</p>
+                    </div>
+                    <div>
+                        <label for="huggingface-provider" class="block text-sm font-medium text-text-secondary mb-1">Provedor</label>
+                        <select id="huggingface-provider" class="w-full">
+                            <option value="huggingface">Hugging Face (Padrão)</option>
+                            <option value="fireworks-ai">Fireworks AI</option>
+                            <option value="together-ai">Together AI</option>
+                            <!-- Outros provedores podem ser adicionados aqui -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="huggingface-task-type" class="block text-sm font-medium text-text-secondary mb-1">Tipo de Tarefa do Modelo</label>
+                        <select id="huggingface-task-type" class="w-full">
+                            <option value="text-generation">Geração de Texto (Padrão)</option>
+                            <option value="chat">Chat (Modelos Conversacionais)</option>
+                        </select>
+                        <p class="text-xs text-stone-500 mt-1">Use 'Chat' para modelos de instrução/conversa. Caso contrário, use 'Geração de Texto'.</p>
+                    </div>
+                    <div>
+                        <label for="huggingface-model-id" class="block text-sm font-medium text-text-secondary mb-1">ID do Modelo</label>
+                        <input type="text" id="huggingface-model-id" class="w-full" placeholder="Ex: mistralai/Mistral-7B-Instruct-v0.2">
+                         <p class="text-xs text-stone-500 mt-1">Copie o ID da página do modelo. Ex: 'google/gemma-7b'.</p>
+                    </div>
+                </div>
+
+                <hr class="border-border-color">
+
+                <div>
+                    <label for="image-api-provider" class="block text-sm font-medium text-text-secondary mb-1">Provedor de IA de Imagem</label>
+                    <select id="image-api-provider" name="image-api-provider" class="w-full">
+                        <option value="google">Google Imagen</option>
+                        <option value="clipdrop">Clipdrop (Stability AI)</option>
+                    </select>
+                </div>
+                <div id="clipdrop-api-key-container" class="hidden">
+                    <label for="clipdrop-api-key" class="block text-sm font-medium text-text-secondary mb-1">Chave de API do Clipdrop</label>
+                    <input type="password" id="clipdrop-api-key" class="w-full" placeholder="Cole sua chave aqui">
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="save-settings-btn" class="bg-accent-main text-bg-main font-bold py-2 px-4 rounded-lg">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const ChargenStudio = {
+            // Contém o estado dinâmico da aplicação
+            state: {
+                openAccordion: null,
+                openSubAccordion: null,
+                openMainSection: null,
+                styleSelectedTerms: new Set(),
+                toastTimeout: null,
+                base64ImageData: null,
+            },
+
+            // Contém a configuração estática da aplicação (formulários, listas, etc.)
+            config: {
+                api: {
+                    geminiModel: "gemini-2.0-flash",
+                    imagenModel: "imagen-3.0-generate-002",
+                    geminiUrl: "https://generativelanguage.googleapis.com/v1beta/models/",
+                    imagenUrl: "https://generativelanguage.googleapis.com/v1beta/models/",
+                },
+                formSections: {
+                    identidade: { 
+                        title: 'Identidade', 
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-emerald-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>`,
+                        fields: {
+                            genero: { label: "Gênero", type: "select", options: ["Não especificado", "Masculino", "Feminino", "Não-binário", "Andrógino", "Gênero-fluido", "Intersexo", "Agênero", "Dois-espíritos", "Outro"] },
+                            racaEspecie: { label: "Raça/Espécie", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado"], "Humanas": ["Humano (Caucasiano)", "Humano (Asiático)", "Humano (Africano)", "Humano (Latino)", "Humano (Indígena)", "Humano (Miscigenado)", "Humano (Nórdico)"], "Fantasia Clássica": ["Elfo (Alto Elfo)", "Elfo (Elfo da Floresta)", 'Elfo (Elfo do Mar)', "Elfo (Elfo Negro/Drow)", "Anão (da Montanha)", "Anão (da Colina)", "Orc", "Meio-Orc", "Goblin", "Hobgoblin", "Bugbear", "Hobbit/Halfling", "Gnomo (da Floresta)", "Gnomo (das Rochas)", "Tiefling", "Aasimar", "Genasi (do Fogo, Água, Ar, Terra)", "Draconato", "Homem-Fera (Lobisomem, Minotauro, Povo-Gato, Povo-Lagarto)", "Gigante", "Troll", "Ogro", "Meio-Elfo"], "Ficção Científica": ["Ciborgue", "Androide/Sintético", "Humano Aprimorado", "Alienígena (Reptiliano)", "Alienígena (Insetoide)", "Alienígena (Humanoide)", "Alienígena (Aquático)", "Alienígena (Aviário)", "Alienígena (Energético/Não-corpóreo)", "Alienígena (Silicoide)", "Mutante", "Pós-Humano", "Clone"], "Mitológicas": ["Anjo", "Arcanjo", "Demônio", "Diabo", "Súcubo/Íncubo", "Vampiro", "Fada (Pixie, Sprite)", "Sereia/Tritão", "Centauro", "Sátiro/Fauno", "Harpia", "Górgona", "Elemental (Fogo, Água, Ar, Terra, Gelo, Raio)", "Djinn/Gênio", "Kami", "Yokai (Kitsune, Oni, Tengu)"], "Outras": ["Morto-vivo (Zumbi, Esqueleto, Liche, Fantasma, Múmia)", "Construto (Golem de Pedra, Carne, Ferro)", "Autômato (Mecanismo de Relojoaria)", "Planta Antropomórfica (Dríade, Ent)", "Povo-Cogumelo", "Slime/Amorfo", "Doppelgänger/Metamorfo"] } },
+                            arquetipo: { label: "Arquétipo", type: "select", options: ["Não especificado", "O Herói", "O Mentor", "O Guardião do Umbral", "O Arauto", "O Metamorfo", "A Sombra", "O Aliado/Companheiro", "O Trapaceiro/Pícaro", "A Donzela/Donzelo em Perigo", "O Vilão", "O Anti-Herói", "A Criança Divina", "A Grande Mãe", "O Sábio Velho", "O Inocente", "O Explorador", "O Rebelde", "O Amante", "O Criador", "O Governante", "O Mago/Feiticeiro", "O Bobo da Corte"] },
+                            profissao: { label: "Profissão/Função", type: "select", options: ["Não especificado", "Guerreiro(a)", "Mago(a)/Feiticeiro(a)", "Ladino(a)/Assassino(a)", "Clérigo(a)/Curandeiro(a)", "Bardo(a)", "Arqueiro(a)", "Paladino(a)", "Druida", "Monge", "Caçador(a) de Recompensas", "Nobre", "Comerciante", "Ferreiro(a)", "Piloto(a) de Nave", "Engenheiro(a) Espacial", "Cientista", "Soldado(a) Espacial/Fuzileiro(a)", "Contrabandista", "Explorador(a) Cósmico", "Diplomata Interestelar", "Hacker/Netrunner", "Médico(a) de Bordo", "Detetive", "Jornalista", "Artista", "Músico(a)", "Atleta", "Empresário(a)", "Policial", "Bombeiro(a)", "Chef de Cozinha", "Professor(a)", "Bio-engenheiro(a)", "Técnico(a) de IA", "Influenciador(a) Digital", "Especialista em Sobrevivência", "Arqueólogo(a)"] }
+                        }
+                    },
+                    aparencia: {
+                        title: 'Aparência',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-teal-400"><path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.39m3.421 3.415a3 3 0 0 0 5.78-1.128 2.25 2.25 0 0 1 2.4-2.245 4.5 4.5 0 0 0-8.4 2.245c0 .399.078.78.22 1.128Zm0 0l3.388 1.62m-5.043-.025a15.994 15.994 0 0 1-1.622-3.39m3.421 3.415Z" /></svg>`,
+                        fields: {
+                            nomePersonagem: { label: "Nome", type: "text-ia", buttonId: "generateNameBtn", loaderId: "nameLoader" },
+                            tipoCorpo: { label: "Tipo de Corpo", type: "select", options: ["Não especificado", "Esguio", "Atlético", "Musculoso(a)", "Corpulento(a)", "Magro(a)", "Ossudo(a)", "Curvilíneo(a)", "Plus-size", "Pequeno(a)/Baixo(a)", "Alto(a)/Gigante", "Robusto(a)", "Andrógino", "Delicado(a)", "Frágil", "Infantil", "Idoso(a)/Envelhecido", "Cicatrizado", "Deformado"] },
+                            penteado: { label: "Penteado", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado"], "Comprimentos": ["Careca", "Muito Curto (Raspado/Buzzcut)", "Curto", "Médio (altura dos ombros)", "Longo", "Muito Longo (cintura ou mais)"], "Estilos": ["Liso", "Ondulado", "Cacheado", "Crespo/Afro", "Tranças (Boxeadoras, Nagô, Vikings, etc.)", "Dreadlocks", "Rabo de Cavalo (Alto, Baixo)", "Coque (Alto, Despojado)", "Topete", "Moicano", "Undercut", "Sidecut", "Corte Tigela (Bowl Cut)", "Assimétrico", "Repicado", "Bagunçado/Despojado", "Alinhado/Geométrico", "Com Franja (Reta, Lateral, Cortina)"], "Cores Exóticas": ["Platinado", "Azul Elétrico", "Verde Neon", "Rosa Choque", "Multicolorido/Arco-íris"] } },
+                            corPele: { label: "Cor da Pele", type: "text", placeholder: "Ex: pálida, bronzeada, azulada..." },
+                            corCabelo: { label: "Cor do Cabelo", type: "text", placeholder: "Ex: loiro platinado, ruivo fogo..." },
+                            corOlhos: { label: "Cor dos Olhos", type: "text", placeholder: "Ex: verde esmeralda, âmbar..." },
+                            texturaPele: { label: "Textura da Pele/Corpo", type: "select", options: ["Não especificado", "Lisa", "Escamosa", "Metálica", "Rochosa", "Peluda", "Translúcida", "Brilhante", "Rachada", "Casca de Árvore", "Queimada", "Cicatrizada"] },
+                            tipoAsas: { label: "Tipo de Asas", type: "select", options: ["Não especificado", "Sem Asas", "Penas (Anjo)", "Penas (Pássaro)", "Membranosas (Demônio/Dragão)", "Inseto (Borboleta/Libélula)", "Mecânicas/Tecnológicas", "Esqueléticas", "Energéticas/Etéreas", "Feitas de Fogo/Gelo/Luz"] },
+                            tipoCauda: { label: "Tipo de Cauda", type: "select", options: ["Não especificado", "Sem Cauda", "Longa e Peluda (Raposa/Esquilo)", "Longa e Lisa (Felina)", "Reptiliana/Escamosa", "Demoníaca (com ponta)", "Mecânica/Cibernética", "Grossa e Musculosa (Dinossauro)", "Ossuda", "Curta (Coelho)"] },
+                            tipoChifres: { label: "Tipo de Chifres", type: "select", options: ["Não especificado", "Sem Chifres", "Pequenos e Pontudos", "Grandes e Curvados (Carneiro)", "Longos e Retos (Antílope)", "Galhadas (Cervo)", "Demoníacos (complexos e variados)", "Cristalinos", "Metálicos", "Assimétricos"] }
+                        }
+                    },
+                    trajes: {
+                        title: 'Trajes e Equipamentos',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-amber-400"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.664 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.631 5.631L21.25 9.5l-5.208-5.209L9.5 11.042l5.63 5.63Z" /></svg>`,
+                        fields: {
+                            vestimentaPrincipal: { label: "Vestimenta Principal", type: "select", options: ["Não especificado", "Roupas Casuais Modernas", "Roupas de Grife", "Traje Formal (Gala, Terno)", "Uniforme (Escolar, Militar, Profissional)", "Roupas de Aventura/Explorador", "Roupas de Camponês/Plebeu", "Vestes Nobres/Reais", "Vestes Mágicas/de Feiticeiro", "Hábito Religioso/de Monge", "Traje Futurista/Sci-Fi", "Traje Pós-Apocalíptico", "Roupas Tribais/Primitivas", "Kimono/Yukata", "Qipao/Cheongsam", "Sari", "Toga", "Roupas de Couro/Punk"] },
+                            armadura: { label: "Armadura", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado", "Sem Armadura"], "Leve": ["Couro Batido", "Corselete de Couro", "Gambeson/Acolchoada", "Armadura de Seda"], "Média": ["Cota de Malha", "Brigandina", "Loriga segmentata", "Peitoral de Aço", "Escamas de Dragão"], "Pesada": ["Armadura de Placas Completa", "Armadura de Campo Gótica", "Armadura Samurai (O-Yoroi)"], "Ficção Científica": ["Traje de Combate Leve (Kevlar)", "Armadura de Polímero", "Exoesqueleto Leve", "Power Armor", "Armadura de Energia"], "Exótica": ["Armadura de Osso", "Armadura de Quitina", "Armadura de Cristal", "Armadura Viva/Simbionte"] } },
+                            armas: { label: "Arma", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado", "Desarmado(a)"], "Lâminas": ["Espada Longa", "Espada Curta", "Adaga/Faca", "Katana", "Wakizashi", "Cimitarra", "Rapieira", "Gládio", "Montante/Zweihänder", "Sabre de Luz"], "Machados": ["Machado de Batalha", "Machadinha", "Machado de Duas Mãos"], "Impacto": ["Maça", "Mangual", "Martelo de Guerra", "Clava", "Bastão (Bo Staff)"], "Haste": ["Lança", "Alabarda", "Glaive", "Tridente", "Pique"], "Distância (Arco/Besta)": ["Arco Curto", "Arco Longo", "Besta Leve", "Besta Pesada", "Arco Composto"], "Distância (Fogo/Pólvora)": ["Pistola Flintlock", "Mosquete", "Revólver", "Rifle"], "Distância (Moderno/Sci-Fi)": ["Pistola Semiautomática", "Submetralhadora", "Fuzil de Assalto", "Rifle de Precisão", "Lança-granadas", "Pistola Laser", "Rifle de Plasma", "Canhão de Partículas"], "Exóticas": ["Chicote", "Nunchaku", "Kusarigama (Corrente com foice)", "Leque de Guerra", "Manoplas com Lâminas", "Shuriken/Kunai", "Bumerangue de Batalha", "Grimório/Tomo Mágico", "Orbe de Poder"] } }
+                        }
+                    },
+                    personalidade: {
+                        title: 'Personalidade',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-violet-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672ZM12 2.25a8.25 8.25 0 1 1-8.25 8.25A8.25 8.25 0 0 1 12 2.25Z" /></svg>`,
+                        fields: {
+                            tracoPrincipal: { label: "Traço Principal", type: "select", options: ["Não especificado", "Corajoso(a)", "Covarde", "Honesto(a)", "Desonesto(a)", "Altruísta", "Egoísta", "Otimista", "Pessimista", "Calmo(a)", "Irritadiço(a)", "Tímido(a)", "Extrovertido(a)", "Cínico(a)", "Ingênuo(a)"] },
+                            motivacao: { label: "Motivação", type: "select", options: ["Não especificado", "Vingança", "Riqueza", "Conhecimento", "Poder", "Justiça", "Sobrevivência", "Amor", "Fama", "Redenção", "Proteção", "Dever"] },
+                            medo: { label: "Medo/Fobia", type: "select", options: ["Não especificado", "Da Morte", "Da Solidão", "Do Fracasso", "Do Desconhecido", "De Altura", "De Lugares Fechados", "De Insetos/Aracnídeos", "Da Traição", "De Perder o Controle"] },
+                            qualidades: { label: "Qualidades (separadas por vírgula)", type: "textarea", rows: 2, placeholder: "Ex: Leal, inteligente, bem-humorado..." },
+                            defeitos: { label: "Defeitos (separados por vírgula)", type: "textarea", rows: 2, placeholder: "Ex: Teimoso, impaciente, orgulhoso..." }
+                        }
+                    },
+                    poderes: {
+                        title: 'Poderes e Habilidades',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-yellow-400"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" /></svg>`,
+                        fields: {
+                            fontePoder: { label: "Fonte de Poder", type: "select", options: ["Não especificado", "Inato/Genético", "Treinamento Físico", "Tecnologia Avançada", "Magia Arcana", "Pacto com Entidade", "Bênção Divina", "Item Mágico", "Acidente Experimental", "Força da Natureza"] },
+                            escolaMagia: { label: "Escola de Magia/Poder", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado"], "Elemental": ["Pirocinese (Fogo)", "Hidrocinese (Água)", "Geocinese (Terra)", "Aerocinese (Ar)", "Criocinese (Gelo)", "Eletrocinese (Raio)"], "Mente e Espírito": ["Telepatia", "Telecinese", "Controle Mental", "Projeção Astral", "Premonição"], "Manipulação": ["Manipulação da Matéria", "Manipulação da Energia", "Manipulação do Tempo", "Manipulação da Gravidade", "Manipulação da Luz/Sombra"], "Convocação e Necromancia": ["Invocação de Criaturas", "Necromancia", "Criação de Portais"], "Físico e Biológico": ["Super-força", "Super-velocidade", "Regeneração Acelerada", "Metamorfose", "Invisibilidade"] } },
+                            habilidadeUnica: { label: "Habilidade Única", type: "text-ia", buttonId: "generateHabilidadeBtn", loaderId: "habilidadeLoader" },
+                            nivelPoder: { label: "Nível de Poder", type: "select", options: ["Não especificado", "Noviço(a)/Iniciante", "Competente", "Especialista", "Mestre", "Lendário(a)", "Divino/Cósmico"] }
+                        }
+                    },
+                     narrativa: {
+                        title: 'Narrativa',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-orange-400"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>`,
+                        fields: {
+                            temaGeral: { label: "Tema Geral", type: "select", options: ["Não especificado", "Aventura", "Batalha Épica", "Combate Singular", "Exploração", "Descoberta", "Mistério", "Investigação", "Sobrevivência", "Terror", "Romance", "Tragédia", "Comédia", "Celebração/Festa", "Ritual Mágico", "Coroação", "Fuga"] },
+                            cenarioDetalhado: { label: "Cenário Detalhado", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado"], "Natureza": ["Floresta Densa e Antiga", "Pântano Assombrado", "Montanhas Nevadas", "Pico de Vulcão", "Deserto Árido", "Oásis Exuberante", "Selva Tropical", "Caverna de Cristais", "Recife de Coral Subaquático", "Campo de Flores Selvagens"], "Urbano": ["Castelo Medieval em Ruínas", "Cidade Futurista Distópica", "Metrópole Cyberpunk Iluminada por Néon", "Mercado Medieval Movimentado", "Viela Sombria e Chuvosa", "Salão do Trono Opulento", "Biblioteca Antiga e Poeirenta"], "Exótico/Fantástico": ["Cidade Flutuante nos Céus", "Reino Subterrâneo dos Anões", "Palácio de Gelo", "Dimensão Alienígena Bizarra", "Campo de Batalha Astral", "Interior de uma Nave Espacial", "Ruínas de uma Civilização Antiga", "Mercado Negro Flutuante", "Biblioteca Interdimensional"] } },
+                            acaoPose: { label: "Ação/Pose", type: "select", hasOptgroups: true, options: { "Não especificado": ["Não especificado", "Pose Neutra/Retrato"], "Estáticas": ["Sentado(a) em um trono", "Meditando", "Lendo um livro antigo", "Observando o horizonte", "Apoiado(a) em uma parede", "De joelhos, em súplica ou prece", "Oferecendo um objeto"], "Dinâmicas": ["Correndo desesperadamente", "Saltando sobre um abismo", "Brandindo uma arma", "Lançando um feitiço", "Esquivando de um ataque", "Escalando uma montanha", "Dançando", "Sussurrando um segredo", "Pilotando um veículo"] } },
+                            expressaoFacial: { label: "Expressão Facial", type: "select", options: ["Não especificado", "Neutra", "Sorrindo (Sutil, Largo)", "Gargalhando", "Triste", "Chorando", "Irritado(a)", "Enfurecido(a)", "Surpreso(a)", "Chocado(a)", "Assustado(a)", "Curioso(a)", "Desconfiado(a)", "Confiante/Arrogante", "Cansado(a)/Exausto(a)", "Sereno/Pacífico", "Concentrado(a)"] }
+                        }
+                    },
+                    estilo: {
+                        title: 'Estilo Visual',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-emerald-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5"></path></svg>`,
+                        fields: {
+                            inspiracaoArtista: { label: "Inspiração Artística", type: "select", options: ["Não especificado", "Greg Rutkowski (fantasia épica, D&D)", "Alphonse Mucha (Art Nouveau, cartazes)", "H.R. Giger (biomecânico, Alien)", "Frank Frazetta (fantasia heroica, barbáros)", "Yoshitaka Amano (Final Fantasy, etéreo)", "Zdzisław Beksiński (distopia surrealista, sombrio)", "Moebius (ficção científica, quadrinhos europeus)", "Hayao Miyazaki (Studio Ghibli)", "James Jean (surreal, detalhado)", "J.C. Leyendecker (ilustração da Era de Ouro)"]},
+                            movimentoArtistico: { label: "Movimento Artístico", type: "select", options: ["Não especificado", "Renascimento", "Barroco", "Rococó", "Romantismo", "Realismo", "Impressionismo", "Pós-Impressionismo", "Simbolismo", "Surrealismo", "Expressionismo", "Cubismo", "Futurismo", "Art Nouveau", "Art Deco", "Pop Art", "Minimalismo"]},
+                            enquadramentoCamera: { label: "Enquadramento", type: "select", options: ["Não especificado", "Plano Detalhe (Extreme Close-up)", "Primeiro Plano (Close-up)", "Plano Médio", "Plano Americano", "Plano Inteiro (Full Shot)", "Plano Conjunto", "Plano Geral (Long Shot)", "Grande Plano Geral (Extreme Long Shot)", "Contra-plongée (ângulo baixo)", "Plongée (ângulo alto)", "Plano Zenital (de cima para baixo)", "Olho de Minhoca (de baixo para cima)", "Olho de Pássaro (vista aérea)", "Plano Holandês (inclinado)", "Sobre o Ombro (Over the Shoulder)"]},
+                            estiloLente: { label: "Lente", type: "select", options: ["Não especificado", "Lente Padrão (50mm)", "Lente Grande Angular", "Lente Teleobjetiva", "Lente Olho de Peixe", "Lente Macro", "Foco Suave", "Profundidade de Campo Rasa", "Profundidade de Campo Ampla", "Bokeh Acentuado", "Tilt-Shift", "Lente Anamórfica"]},
+                            efeitosVisuais: { label: "Efeitos", type: "select", options: ["Não especificado", "HDR (Alto Alcance Dinâmico)", "Resolução 4K/8K/16K", "Foco Nítido", "Desfoque de Movimento", "Grão Cinematográfico", "Vazamento de Luz", "Lens Flare", "Vinheta", "Aberração Cromática", "Glitch Art", "Scanlines (linhas de tela)", "Efeito VHS", "Bloom (brilho intenso)", "Partículas (poeira, faíscas, magia, cinzas)", "Distorção de Calor"]},
+                            iluminacaoAtmosfera: { label: "Iluminação", type: "select", options: ["Não especificado", "Luz do Dia (Sol Forte)", "Luz Difusa (Nublado)", "Crepúsculo/Hora Dourada", "Hora Azul", "Noite (Luar)", "Noite (Urbana/Néon)", "Iluminação de Estúdio (3 pontos)", "Luz de Velas/Fogueira", "Luz Volumétrica/Raios de Luz", "Contraluz (iluminação de contorno)", "Iluminação Dramática (Claro-escuro)", "Silhueta", "Névoa/Neblina", "Chuva/Tempestade", "Neve/Nevasca", "Tempestade de Areia", "Subaquático", "Espaço Sideral", "Bioluminescência"]},
+                        },
+                        subcategories: {
+                            artists: { title: "Artistas", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3 text-emerald-400"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M15.23 5.23L9.17 10.17c-.4.39-.4 1.02 0 1.41l5.3 5.3c.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41L11.7 10.88l4.24-4.24c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.4-.08-1.03.31-1.42z"/></svg>`, items: ['Abigail Larson (arte gótica, contos de fadas sombrios)', 'Adam Hughes (pin-ups, quadrinhos)', 'Afarin Sajedi (retratos surreais e melancólicos)', 'Akira Toriyama (Dragon Ball, Dr. Slump)', 'Alphonse Mucha (Art Nouveau, cartazes ornamentados)', 'Alvaro Siza (arquitetura minimalista)', 'Anato Finnstark (fantasia sombria, ambientes épicos)', 'Andrea Kowch (realismo mágico, narrativas rurais)', 'Andreas Rocha (paisagens de fantasia, arte de games)', 'Andrei Tarkovsky (cinema poético, Stalker)', 'Andrew Wyeth (realismo, paisagens americanas)', 'Anna Bocek (retratos expressivos, abstratos)', 'Anthony Van Dyck (retratos barrocos, nobreza)', 'Antoine Blanchard (cenas urbanas parisienses, Belle Époque)', 'Anton Fadeev (arte conceitual, ficção científica)', 'Arcimboldo (retratos com frutas e vegetais)', 'Ayami Kojima (arte de Castlevania, estilo gótico)', 'Banksy (arte de rua, crítica social)', 'Bernie Wrightson (terror, quadrinhos, Frankenstein)', 'Bill Sienkiewicz (arte de quadrinhos experimental)', 'Bob Eggleton (ficção científica, fantasia, monstros)', 'Carne Griffiths (desenhos com tinta e chá)', 'Caspar David Friedrich (Romantismo, paisagens sublimes)', 'Charlie Bowater (arte de fantasia, retratos femininos)', 'Chris Rahn (arte para Magic: The Gathering)', 'Claude Monet (Impressionismo, nenúfares)', 'Craig Mullins (pintura digital, arte conceitual)', 'Dan Mumford (pôsteres de cultura pop, cores vibrantes)', 'Dave McKean (colagens, quadrinhos, Sandman)', 'David Hockney (Pop Art, piscinas)', 'Diego Rivera (muralismo mexicano)', 'Donato Giancola (fantasia clássica, realismo)', 'Doré (ilustrações bíblicas e literárias)', 'Drew Struzan (pôsteres de filmes icônicos)', 'Ed Binkley (fantasia, personagens caprichosos)', 'Edward Gorey (ilustrações macabras e bem-humoradas)', 'Edward Hopper (solidão urbana, realismo americano)', 'Egon Schiele (Expressionismo, retratos contorcidos)', 'Eiichiro Oda (One Piece)', 'Frank Frazetta (fantasia heroica, barbáros)', 'Frida Kahlo (auto-retratos, surrealismo mexicano)', 'Gediminas Pranckevicius (paisagens surreais e sonhadoras)', 'Genndy Tartakovsky (animação, Samurai Jack)', 'Georges Seurat (Pontilhismo)', 'Georgia O\'Keeffe (flores, paisagens do Novo México)', 'Gerald Brom (fantasia gótica, arte sombria)', 'Greg Hildebrandt (pôsteres de Star Wars, fantasia)', 'Greg Rutkowski (fantasia épica, Dungeons & Dragons)', 'Guido Borelli (paisagens italianas, impressionismo)', 'Gustav Klimt (Simbolismo, O Beijo)', 'Gustave Moreau (Simbolismo, temas mitológicos)', 'H.R. Giger (arte biomecânica, Alien)', 'Hayao Miyazaki (Studio Ghibli, A Viagem de Chihiro)', 'Henri Matisse (Fauvismo, uso radical da cor)', 'Hieronymus Bosch (renascimento nórdico, cenas fantásticas)', 'Hsiao-Ron Cheng (retratos surreais e delicados)', 'Ivan Aivazovsky (paisagens marinhas, Romantismo)', 'J.C. Leyendecker (ilustração da Era de Ouro)', 'J.M.W. Turner (paisagens românticas, luz e atmosfera)', 'Jack Kirby (quadrinhos, O Rei dos Quadrinhos)', 'James Gurney (Dinotopia, realismo fantástico)', 'James Jean (arte surreal e detalhada)', 'Jason Edmiston (pôsteres de cultura pop, realismo)', 'Jean-Auguste-Dominique Ingres (Neoclassicismo, retratos)', 'Jean-Michel Basquiat (neo-expressionismo, arte de rua)', 'Jesper Ejsing (fantasia, arte para D&D e Magic)', 'Jim Burns (ficção científica, capas de livros)', 'Joan Miró (surrealismo abstrato)', 'John Avon (paisagens para Magic: The Gathering)', 'John Berkey (arte espacial, ficção científica)', 'John Harris (paisagens de ficção científica épicas)', 'John Singer Sargent (retratos realistas e elegantes)', 'John William Waterhouse (Pré-Rafaelita, mitologia)', 'Jordan Grimmer (paisagens de fantasia vibrantes)', 'Josan Gonzalez (cyberpunk, arte detalhada)', 'Josephine Wall (fantasia, seres místicos)', 'Katsuhiro Otomo (Akira, cyberpunk)', 'Kay Nielsen (ilustrações de contos de fadas)', 'Keith Haring (Pop Art, grafite)', 'Kelly Freas (ilustração de ficção científica clássica)', 'Kentaro Miura (Berserk, fantasia sombria)', 'Kiliana ENG (retratos de fantasia etéreos)', 'Kim Jung Gi (desenho dinâmico, perspectiva complexa)', 'Larry Elmore (arte de Dungeons & Dragons clássica)', 'Leonardo da Vinci (Renascimento, Mona Lisa)', 'Lois van Baarle (Loish, retratos digitais estilizados)', 'Magali Villeneuve (arte para Magic e Game of Thrones)', 'Makoto Shinkai (anime, paisagens hiper-realistas)', 'Marc Simonetti (arte de fantasia, A Roda do Tempo)', 'Mark Ryden (surrealismo pop, temas kitsch)', 'Mary Blair (arte conceitual da Disney, cores vibrantes)', 'Max Ernst (Surrealismo, Dadaísmo)', 'Maxfield Parrish (cores saturadas, Neoclassicismo)', 'Michael Whelan (capas de ficção científica e fantasia)', 'Michelangelo (Renascimento, Capela Sistina)', 'Mike Mignola (Hellboy, estilo de alto contraste)', 'Moebius (Jean Giraud) (ficção científica, quadrinhos europeus)', 'Naoko Takeuchi (Sailor Moon)', 'Norman Rockwell (realismo americano, cenas cotidianas)', 'Pablo Picasso (Cubismo)', 'Paul Cézanne (Pós-Impressionismo)', 'Peter Andrew Jones (capas de ficção científica retrô)', 'Peter Mohrbacher (anjos, Angelarium)', 'Pierre-Auguste Renoir (Impressionismo, retratos)', 'Pieter Bruegel, o Velho (Renascimento, cenas de camponeses)', 'Pino Daeni (pintura figurativa, mulheres)', 'Ralph McQuarrie (arte conceitual de Star Wars)', 'Raphael (Renascimento, A Escola de Atenas)', 'Rebecca Guay (fantasia, aquarela)', 'Rembrandt (Barroco, claro-escuro)', 'René Magritte (Surrealismo, O Filho do Homem)', 'Richard Corben (quadrinhos de terror e underground)', 'Rob Liefeld (quadrinhos dos anos 90, anatomia exagerada)', 'Robert McGinnis (pôsteres de James Bond, pulp)', 'Roger Dean (capas de álbuns de rock progressivo)', 'Roy Lichtenstein (Pop Art, pontos Ben-Day)', 'Rumiko Takahashi (InuYasha, Ranma ½)', 'Salvador Dalí (Surrealismo, A Persistência da Memória)', 'Samdoesarts (retratos digitais estilizados)', 'Seb McKinnon (arte sombria para Magic)', 'Shaun Tan (livros ilustrados surreais)', 'Syd Mead (designer futurista, Blade Runner)', 'Tamara de Lempicka (Art Déco, retratos)', 'Tarsila do Amaral (Modernismo brasileiro, Abaporu)', 'Ted Nasmith (ilustrações de Tolkien)', 'Terese Nielsen (arte para Magic: The Gathering)', 'Thomas Cole (Escola do Rio Hudson, paisagens)', 'Thomas Kinkade (pintor da luz, comercial)', 'Tim Burton (estilo gótico e excêntrico)', 'Tim Hildebrandt (fantasia, com seu irmão Greg)', 'Todd McFarlane (Spawn, quadrinhos)', 'Vincent Di Fate (ficção científica, naves espaciais)', 'Vincent van Gogh (Pós-Impressionismo, Noite Estrelada)', 'Wassily Kandinsky (abstracionismo)', 'Wayne Barlowe (criaturas alienígenas, demônios)', 'Wes Anderson (cinema simétrico e estilizado)', 'William Blake (Romantismo, mitologia pessoal)', 'William-Adolphe Bouguereau (Academicismo, realismo)', 'Yoshitaka Amano (Final Fantasy, arte etérea)', 'Yusuke Murata (One-Punch Man, arte dinâmica)', 'Zaha Hadid (arquitetura desconstrutivista)', 'Zdzisław Beksiński (distopia surrealista, arte sombria)'] },
+                            media: { title: "Mídia/Técnica", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3 text-teal-400"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path></svg>`, items: ['aerógrafo', 'água-forte', 'amigurumi', 'arte com areia', 'arte com pontos', 'arte com spray', 'arte com arame', 'arte de fiação', 'arte digital', 'arte em tecido', 'arte em fractal', 'arte em vidro', 'arte processual', 'arte vetorial', 'arte voxel', 'aquarela', 'assemblage', 'batik', 'bordado', 'bronze', 'capa de álbum', 'carvão', 'caseína', 'cianotipia', 'cinzeladura', 'colagem', 'colotipia', 'conceito de arte', 'crochê', 'daguerreótipo', 'decalcomania', 'desenho anatômico', 'desenho com caneta e nanquim', 'desenho com giz', 'desenho com grafite', 'desenho com lápis de cor', 'desenho com marcador', 'diorama', 'doodle', 'eletrofotografia', 'entalhe em madeira', 'escultura', 'escultura em gelo', 'esboço', 'esfuminho', 'esgrafito', 'estampa', 'estêncil', 'feltro', 'ferrotipia', 'fotobashing', 'fotograma', 'fotogravura', 'fresco', 'fumage', 'gesso', 'giz pastel', 'glitter', 'gouache', 'grafite', 'grattage', 'hachura', 'henna', 'holografia', 'ilustração', 'impressão em bloco', 'impressão giclée', 'impasto', 'kirigami', 'laca', 'lápis de cera', 'linoleogravura', 'litografia', 'low-poly', 'macramê', 'mandala', 'maquete', 'marchetaria', 'meio-tom', 'metalurgia', 'miniatura', 'monotipia', 'mosaico', 'mural', 'objeto encontrado', 'óleo sobre tela', 'origami', 'ouro', 'palekh', 'papel machê', 'papel picado', 'pastel', 'pintura acrílica', 'pintura a seco', 'pintura de areia', 'pintura em miniatura', 'pintura em seda', 'pintura em têmpera', 'pintura hard-edge', 'pirografia', 'pixel art', 'polaroid', 'ponto cruz', 'porcelana', 'pôster', 'quilling', 'rabisco', 'relevo', 'resina', 'retícula', 'serigrafia', 'stop-motion', 'tapeçaria', 'tatuagem', 'terra cota', 'tricô', 'veludo', 'vidro soprado', 'vitral', 'xilogravura'] },
+                            games: { title: "Jogos", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3 text-red-400"><path d="M2 12h3m14 0h3M12 2v3m0 14v3"></path><circle cx="12" cy="12" r="7"></circle></svg>`, items: ['Alan Wake', 'Animal Crossing', 'Apex Legends', 'Arkham Knight', 'Assassin\'s Creed', 'Baldur\'s Gate', 'Bastion', 'Bayonetta', 'BioShock', 'Bloodborne', 'Borderlands', 'Braid', 'Breath of the Wild', 'Castlevania', 'Chrono Trigger', 'Control', 'Cuphead', 'Cyberpunk 2077', 'Dark Souls', 'Darksiders', 'Dead Space', 'Death Stranding', 'Destiny', 'Deus Ex', 'Devil May Cry', 'Diablo', 'Disco Elysium', 'Dishonored', 'Donkey Kong', 'Doom', 'Dragon Age', 'Dragon Quest', 'Dwarf Fortress', 'Earthbound', 'Elden Ring', 'Elite Dangerous', 'Eve Online', 'Fable', 'Fallout', 'Final Fantasy', 'Final Fantasy Tactics', 'Fire Emblem', 'Fortnite', 'Gears of War', 'Ghost of Tsushima', 'God of War', 'Grand Theft Auto', 'Gris', 'Hades', 'Half-Life', 'Halo', 'Harvest Moon', 'Hellblade', 'Hollow Knight', 'Horizon Zero Dawn', 'Journey', 'Katamari Damacy', 'Kerbal Space Program', 'Kingdom Hearts', 'League of Legends', 'Left 4 Dead', 'Limbo', 'Magic the Gathering', 'Mario Kart', 'Mass Effect', 'Mega Man', 'Metal Gear Solid', 'Metroid', 'Minecraft', 'Monkey Island', 'Monster Hunter', 'Mortal Kombat', 'Nier: Automata', 'No Man\'s Sky', 'Octopath Traveler', 'Oddworld', 'Okami', 'Ori and the Blind Forest', 'Overwatch', 'Pac-Man', 'Paper Mario', 'Persona', 'Pokémon', 'Portal', 'Psychonauts', 'Ratchet & Clank', 'Red Dead Redemption', 'Resident Evil', 'Rimworld', 'Sea of Thieves', 'Sekiro', 'Shadow of the Colossus', 'Silent Hill', 'SimCity', 'Skyrim', 'Slay the Spire', 'Sonic the Hedgehog', 'Soul Calibur', 'Spelunky', 'Splatoon', 'StarCraft', 'Stardew Valley', 'Street Fighter', 'Super Mario', 'Super Metroid', 'Team Fortress', 'Tetris', 'The Last of Us', 'The Legend of Zelda', 'The Sims', 'The Witcher', 'Tomb Raider', 'Transistor', 'Undertale', 'Uncharted', 'Valorant', 'Warframe', 'World of Warcraft', 'Xenoblade', 'Yakuza'] },
+                            formats: { title: "Formatos", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3 text-green-400"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`, items: ['adesivo', 'anúncio', 'avatar', 'banner', 'blueprint', 'brochura', 'caixa de cereal', 'capa de livro', 'cartão de visita', 'cartão de tarô', 'cartão postal', 'cartaz de procurado', 'carteira de motorista', 'certidão de nascimento', 'certidão de óbito', 'colorir', 'convite', 'corte transversal', 'desenho técnico', 'diagrama explodido', 'diário de campo', 'diorama', 'documentário', 'emoji', 'emoticon', 'enciclopédia', 'esboço de moda', 'esquema', 'etiqueta', 'ficha de personagem', 'filme noir', 'fita de filme', 'foto da cena do crime', 'foto de vigilância', 'fotografia de moda', 'grafite', 'hieróglifos', 'história em quadrinhos', 'ilustração botânica', 'infográfico', 'jornal', 'livro de receitas', 'livro pop-up', 'logotipo', 'manual de instruções', 'manuscrito iluminado', 'mapa do tesouro', 'modelo 3D', 'nota de dinheiro', 'panfleto', 'passaporte', 'patente', 'pôster de filme', 'propaganda', 'relatório de autópsia', 'revista', 'selo postal', 'sinalização', 'site', 'storyboard', 'tatuagem', 'telegrama', 'toy art', 'videoclipe'] },
+                            aesthetics: { title: "Estética", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3 text-yellow-400"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`, items: ['Academia Sombria (Dark Academia)', 'Afrofuturismo', 'Anacronismo', 'Anime (anos 80, 90)', 'Art Déco', 'Art Nouveau', 'Atompunk', 'Barroco', 'Bauhaus', 'Biopunk', 'Brutalismo', 'Ciber-gótico', 'Ciber-noir', 'Ciber-prep', 'Ciberdelia', 'Cyberpunk (neon, distopia futurista)', 'Decopunk', 'Dieselpunk', 'Distopia', 'Emo', 'Espacial', 'Etéreo', 'Fantasia Sombria (Dark Fantasy)', 'Fauvismo', 'Film Noir', 'Fofo (Kawaii)', 'Fotorrealismo', 'Frutiger Aero (interface de 2000)', 'Futurismo', 'Gótico', 'Grunge', 'High-tech (alta tecnologia)', 'Hip-hop (anos 90)', 'Hope-punk (otimismo)', 'Industrial', 'Infantil', 'Kitsch', 'Lofi', 'Lolita (Gótica, Doce)', 'Lunarpunk', 'Maximalismo', 'Medieval', 'Memphis (design anos 80)', 'Militar', 'Minimalismo', 'Modernismo de Meados do Século', 'Mori Kei (garota da floresta)', 'Náutico', 'Neon', 'Noir', 'Nostálgico', 'Op-Art (arte óptica)', 'Pastel', 'Pós-apocalíptico', 'Pré-histórico', 'Psicodélico', 'Punk', 'Raygun Gothic (retrô sci-fi)', 'Retrofuturismo', 'Retrowave', 'Rococó', 'Romantismo', 'Rústico', 'Sci-fi (ficção científica)', 'Seapunk', 'Skeumorfismo', 'Solarpunk (eco-futurismo)', 'Steampunk (vapor e engrenagens)', 'Surrealismo', 'Synthwave', 'Techwear (roupas técnicas)', 'Tribal', 'Tropical', 'Ukiyo-e (arte japonesa)', 'Vaporwave', 'Vitoriano', 'VSCO', 'Western (faroeste)', 'Witchcore (estética de bruxa)', 'Y2K (anos 2000)', 'Zombiecore'] },
+                            acessorios: { title: "Acessórios & Itens", icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-cyan-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.658-.463 1.243-1.119 1.243H5.502c-.656 0-1.19-.585-1.12-1.243l1.263-12a1.125 1.125 0 0 1 1.12-1.007h8.475a1.125 1.125 0 0 1 1.12 1.007Z" /></svg>`, items: ["Amuleto/Talismã", "Anel Mágico", "Bandoleira", "Bolsa de Cinto", "Brincos", "Bússola/Astroábio", "Cajado", "Cantil", "Capa/Manto com Capuz", "Chapéu/Elmo", "Coroa/Tiara", "Ferramentas de Ladrão", "Kit de Alquimia", "Luvas/Manoplas", "Mapa/Pergaminho", "Máscara", "Mochila", "Óculos/Monóculo", "Orbe de Cristal", "Piercings", "Varinha Mágica", "Visor Tecnológico"] },
+                            periods: { title: "Períodos Históricos", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3 text-orange-400"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M12 2v2.34a6 6 0 0 1 0 11.32V22"></path><path d="M12 22v-2.34a6 6 0 0 0 0-11.32V2"></path></svg>`, items: ['Anos 1920 (Loucos Anos Vinte)', 'Anos 1950', 'Anos 1960 (Era Espacial)', 'Anos 1970 (Era Disco)', 'Anos 1980', 'Anos 1990', 'Anos 2000 (Y2K)', 'Antigo Egito', 'Antiga China', 'Antiga Grécia', 'Antiga Roma', 'Belle Époque', 'Brasil Colônia', 'Corrida do Ouro', 'Era de Ouro da Pirataria', 'Era do Jazz', 'Era Elizabetana', 'Era Regencial', 'Era Vitoriana', 'Faroeste Americano', 'Guerra Civil Americana', 'Guerra Fria', 'Guerra do Vietnã', 'Idade da Pedra', 'Idade do Bronze', 'Idade do Ferro', 'Idade Média', 'Iluminismo', 'Império Asteca', 'Império Bizantino', 'Império Inca', 'Império Mongol', 'Império Otomano', 'Império Persa', 'Império Romano', 'Japão Feudal (Período Edo)', 'Japão Meiji', 'Pré-colombiano', 'Primeira Guerra Mundial', 'Proibição (Lei Seca)', 'Renascimento', 'Revolução Francesa', 'Revolução Industrial', 'Revolução Russa', 'Segunda Guerra Mundial'] },
+                            mythologies: { title: "Mitologias", icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 mr-3 text-fuchsia-400"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6M9 11.25h6M9 15.75h6" /></svg>`, items: ["Mitologia Nórdica", "Mitologia Grega", "Mitologia Romana", "Mitologia Egípcia", "Mitologia Celta", "Mitologia Japonesa (Shinto)", "Mitologia Chinesa", "Mitologia Hindu", "Mitologia Asteca", "Mitologia Maia", "Mitologia Inca", "Mitologia Iorubá", "Mitologia Eslava", "Mitologia Persa", "Mitologia Suméria"] }
+                        }
+                    },
+                    desenvolvimento: {
+                        title: 'Desenvolvimento',
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 text-lime-400"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" /></svg>`,
+                        fields: {
+                            caracteristicasFisicas: { label: "Características Essenciais (Detalhes)", type: "textarea", rows: 3, placeholder: "Ex: tatuagens místicas, cicatriz no olho esquerdo..." },
+                            objetivosPersonagem: { label: "Objetivos do Personagem", type: "textarea-ia", rows: 3, placeholder: "Clique para gerar objetivos com base na personalidade...", buttonId: "generateObjetivosBtn", loaderId: "objetivosLoader" },
+                            historiaFundoGerada: { label: "História de Fundo", type: "textarea-ia", rows: 5, placeholder: "Clique para gerar uma história...", buttonId: "generateBackstoryBtn", loaderId: "backstoryLoader" },
+                            promptNegativo: { label: "Prompt Negativo (Evitar)", type: "text", placeholder: "deformado, texto, watermark..." }
+                        }
+                    }
+                },
+                presets: {
+                    "guerreiraOrc": { nomePersonagem: "Grakka, a Esmagadora", racaEspecie: "Fantasia Clássica|Orc", genero: "Feminino", arquetipo: "O Herói", tipoCorpo: "Musculoso(a)", corPele: "Verde-acinzentado", penteado: "Comprimentos|Longo", vestimentaPrincipal: "Roupas de Aventura", armadura: "Pesada|Armadura de Placas Completa", armas: "Machados|Machado de Batalha", temaGeral: "Batalha", acaoPose: "Dinâmicas|Brandindo uma arma", expressaoFacial: "Irritado(a)", tracoPrincipal: "Corajoso(a)", motivacao: "Proteção", styleSelectedTerms: ["Frank Frazetta (fantasia heroica, barbáros)", "Fantasia Sombria (Dark Fantasy)"]},
+                    "magaElfa": { nomePersonagem: "Lyra Noctu", racaEspecie: "Fantasia Clássica|Elfo (Elfo Negro/Drow)", genero: "Feminino", arquetipo: "O Mentor", tipoCorpo: "Esguio", corPele: "Cinza obsidiana", corCabelo: "Branco platinado", penteado: "Comprimentos|Muito Longo (cintura ou mais)", vestimentaPrincipal: "Vestes Mágicas/de Feiticeiro", armas: "Exóticas|Grimório/Tomo Mágico", temaGeral: "Mistério", cenarioDetalhado: "Natureza|Caverna de Cristais", acaoPose: "Dinâmicas|Lançando um feitiço", expressaoFacial: "Concentrado(a)", tracoPrincipal: "Calmo(a)", motivacao: "Conhecimento", fontePoder: "Magia Arcana", escolaMagia: "Manipulação|Manipulação da Luz/Sombra", nivelPoder: "Mestre", styleSelectedTerms: ["Yoshitaka Amano (Final Fantasy, arte etérea)", "Gótico", "Luz Volumétrica/Raios de Luz"]},
+                    "ciborgueHacker": { nomePersonagem: "Zero-N", racaEspecie: "Ficção Científica|Ciborgue", genero: "Não-binário", arquetipo: "O Trapaceiro/Pícaro", tipoCorpo: "Atlético", vestimentaPrincipal: "Traje Futurista/Sci-Fi", armadura: "Ficção Científica|Exoesqueleto Leve", armas: "Distância (Moderno/Sci-Fi)|Pistola Laser", temaGeral: "Aventura", cenarioDetalhado: "Urbano|Metrópole Cyberpunk Iluminada por Néon", acaoPose: "Estáticas|Observando o horizonte", expressaoFacial: "Confiante/Arrogante", tracoPrincipal: "Cínico(a)", motivacao: "Riqueza", fontePoder: "Tecnologia Avançada", habilidadeUnica: "Interface Neural Direta", nivelPoder: "Especialista", styleSelectedTerms: ["Syd Mead (designer futurista, Blade Runner)", "Cyberpunk (neon, distopia futurista)", "Lens Flare"]},
+                    "feiticeiroCosmico": { nomePersonagem: "Xylar", racaEspecie: "Ficção Científica|Alienígena (Energético/Não-corpóreo)", genero: "Gênero-fluido", arquetipo: "O Explorador", profissao: "Explorador(a) Cósmico", tipoCorpo: "Esguio", vestimentaPrincipal: "Vestes Mágicas/de Feiticeiro", fontePoder: "Força da Natureza", escolaMagia: "Manipulação|Manipulação da Gravidade", nivelPoder: "Lendário(a)", temaGeral: "Descoberta", cenarioDetalhado: "Exótico/Fantástico|Campo de Batalha Astral", acaoPose: "Estáticas|Meditando", expressaoFacial: "Sereno/Pacífico", styleSelectedTerms: ["Moebius (Jean Giraud) (ficção científica, quadrinhos europeus)", "Psicodélico", "Etéreo"] }
+                },
+            },
+            
+            // Funções relacionadas à API
+            api: {
+                _getSettings() {
+                    return JSON.parse(localStorage.getItem('chargen-settings')) || {};
+                },
+
+                async _apiRequest(url, options, loaderId, buttonId) {
+                    const loader = document.getElementById(loaderId);
+                    const button = document.getElementById(buttonId);
+                    if (loader) loader.classList.remove('hidden');
+                    if (button) {
+                        button.disabled = true;
+                        button.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+
+                    try {
+                        const response = await fetch(url, options);
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: { message: `Erro HTTP ${response.status}` } }));
+                            throw new Error(errorData?.error?.message || `Erro HTTP ${response.status}`);
+                        }
+                        // Handle image responses differently from JSON
+                        if (response.headers.get('Content-Type')?.includes('image')) {
+                            const blob = await response.blob();
+                            return new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve({ bytesBase64Encoded: reader.result.split(',')[1] });
+                                reader.onerror = reject;
+                                reader.readAsDataURL(blob);
+                            });
+                        }
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Erro na chamada da API:', error);
+                        ChargenStudio.ui.showToast(`Erro de IA: ${error.message}`, 'error');
+                        return null;
+                    } finally {
+                        if (loader) loader.classList.add('hidden');
+                        if (button) {
+                            button.disabled = false;
+                            button.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                },
+
+                async generateText(prompt, loaderId, buttonId) {
+                    const settings = this._getSettings();
+                    const provider = settings.textProvider || 'google';
+
+                    if (provider === 'google') {
+                        const apiKey = settings.googleApiKey || "";
+                        if (!apiKey) {
+                            ChargenStudio.ui.showToast('Chave de API do Google não encontrada. Salve-a nas configurações.', 'error');
+                            return null;
+                        }
+                        const url = `${ChargenStudio.config.api.geminiUrl}${ChargenStudio.config.api.geminiModel}:generateContent?key=${apiKey}`;
+                        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                        const result = await this._apiRequest(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, loaderId, buttonId);
+                        return result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    } else if (provider === 'huggingface') {
+                        const apiKey = settings.huggingfaceApiKey || "";
+                        const modelId = settings.huggingfaceModelId || "";
+                        const hfProvider = settings.huggingfaceProvider || 'huggingface';
+                        const taskType = settings.huggingfaceTaskType || 'text-generation';
+
+                        if (!apiKey || !modelId) {
+                            ChargenStudio.ui.showToast('Token e ID do Modelo Hugging Face não encontrados. Salve-os nas configurações.', 'error');
+                            return null;
+                        }
+                        
+                        let modelUrl;
+                        let payload;
+                        let modelString = modelId;
+
+                        // Use the router for third-party providers
+                        if (hfProvider !== 'huggingface') {
+                            modelUrl = 'https://router.huggingface.co/v1/chat/completions';
+                            modelString = `${modelId}:${hfProvider}`;
+                             payload = {
+                                model: modelString,
+                                messages: [{ role: "user", content: prompt }]
+                            };
+                        } else {
+                            // Use the standard inference API for default HF models
+                            modelUrl = `https://api-inference.huggingface.co/models/${modelId}`;
+                             if (taskType === 'chat') {
+                                payload = { messages: [{ role: "user", content: prompt }] };
+                            } else {
+                                payload = { inputs: prompt };
+                            }
+                        }
+
+                        const result = await this._apiRequest(modelUrl, { method: 'POST', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, loaderId, buttonId);
+                        
+                        // Parse response based on task type, as router and direct API might differ
+                        if (taskType === 'chat') {
+                            return result?.choices?.[0]?.message?.content;
+                        } else {
+                            return result?.[0]?.generated_text;
+                        }
+                    }
+                    ChargenStudio.ui.showToast(`Provedor de texto '${provider}' não implementado.`, 'error');
+                    return null;
+                },
+
+                async generateImage(prompt, loaderId, buttonId) {
+                    const settings = this._getSettings();
+                    const provider = settings.imageProvider || 'google';
+
+                    if (provider === 'google') {
+                         const apiKey = settings.googleApiKey || "";
+                        if (!apiKey) {
+                            ChargenStudio.ui.showToast('Chave de API do Google não encontrada. Salve-a nas configurações.', 'error');
+                            return null;
+                        }
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                        const payload = { instances: [{ prompt }], parameters: { "sampleCount": 1 } };
+                        const result = await this._apiRequest(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, loaderId, buttonId);
+                        return result?.predictions?.[0]?.bytesBase64Encoded;
+                    } else if (provider === 'clipdrop') {
+                        const apiKey = settings.clipdropApiKey || "";
+                         if (!apiKey) {
+                            ChargenStudio.ui.showToast('Chave de API do Clipdrop não encontrada. Salve-a nas configurações.', 'error');
+                            return null;
+                        }
+                        const url = 'https://clipdrop-api.co/text-to-image/v1';
+                        const formData = new FormData();
+                        formData.append('prompt', prompt);
+                        const result = await this._apiRequest(url, { method: 'POST', headers: { 'x-api-key': apiKey }, body: formData }, loaderId, buttonId);
+                        return result?.bytesBase64Encoded;
+                    }
+                    ChargenStudio.ui.showToast(`Provedor de imagem '${provider}' não implementado.`, 'error');
+                    return null;
+                }
+            },
+
+            // Funções relacionadas à interface do usuário (UI)
+            ui: {
+                /**
+                 * Exibe uma notificação toast.
+                 * @param {string} message - A mensagem a ser exibida.
+                 * @param {'info'|'success'|'error'|'warning'} type - O tipo de notificação.
+                 */
+                showToast(message, type = 'info') {
+                    const toast = document.getElementById('toast-notification');
+                    if (!toast) return;
+                    
+                    toast.textContent = message;
+                    toast.className = 'fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl text-sm z-50 transition-all duration-300 opacity-0 transform translate-y-10';
+                    
+                    requestAnimationFrame(() => {
+                        toast.classList.remove('opacity-0', 'translate-y-10');
+                        const colorClass = {
+                            success: 'bg-lime-600', error: 'bg-red-700',
+                            warning: 'bg-amber-500', info: 'bg-emerald-600'
+                        }[type];
+                        toast.classList.add(colorClass);
+                    });
+
+                    clearTimeout(ChargenStudio.state.toastTimeout);
+                    ChargenStudio.state.toastTimeout = setTimeout(() => {
+                        toast.classList.add('opacity-0', 'translate-y-10');
+                    }, 3000);
+                },
+
+                /**
+                 * Alterna a visibilidade de um painel de acordeão, lidando com aninhamento.
+                 * @param {HTMLButtonElement} button - O botão que acionou o evento.
+                 * @param {boolean} isSubcategory - Se o acordeão é um subnível.
+                 */
+                toggleAccordion(button, isSubcategory = false) {
+                    const content = document.getElementById(`accordion-${button.dataset.key}`);
+                    if (!content) return;
+
+                    const isOpening = !content.classList.contains('open');
+                    const { state } = ChargenStudio;
+
+                    if (isSubcategory) {
+                        // Lógica para sub-acordeões (Artistas, Mídia, etc.)
+                        if (state.openSubAccordion && state.openSubAccordion !== content) {
+                            state.openSubAccordion.classList.remove('open');
+                            const oldSubButton = document.querySelector(`.subcategory-button[data-key="${state.openSubAccordion.id.split('-')[1]}"]`);
+                            if (oldSubButton) {
+                                oldSubButton.setAttribute('aria-expanded', 'false');
+                                oldSubButton.parentElement.classList.remove('active');
+                            }
+                        }
+                        content.classList.toggle('open', isOpening);
+                        button.setAttribute('aria-expanded', isOpening);
+                        button.parentElement.classList.toggle('active', isOpening);
+                        state.openSubAccordion = isOpening ? content : null;
+                    } else {
+                        // Lógica para acordeões principais (Identidade, Estilo, etc.)
+                        if (isOpening) {
+                            // Se está abrindo um novo, fecha o antigo principal e qualquer sub aberto.
+                            if (state.openAccordion && state.openAccordion !== content) {
+                                state.openAccordion.classList.remove('open');
+                                const oldButton = document.querySelector(`.category-button[data-key="${state.openAccordion.id.split('-')[1]}"]`);
+                                if(oldButton) {
+                                    oldButton.setAttribute('aria-expanded', 'false');
+                                    oldButton.parentElement.classList.remove('active');
+                                }
+                            }
+                            if (state.openSubAccordion) {
+                                state.openSubAccordion.classList.remove('open');
+                                const oldSubButton = document.querySelector(`.subcategory-button[data-key="${state.openSubAccordion.id.split('-')[1]}"]`);
+                                if(oldSubButton) {
+                                    oldSubButton.setAttribute('aria-expanded', 'false');
+                                    oldSubButton.parentElement.classList.remove('active');
+                                }
+                                state.openSubAccordion = null;
+                            }
+                        } else {
+                            // Se está fechando o acordeão principal atual, fecha também seu sub-acordeão.
+                             if (state.openSubAccordion && state.openSubAccordion.closest('.accordion-content') === content) {
+                               state.openSubAccordion.classList.remove('open');
+                               const oldSubButton = document.querySelector(`.subcategory-button[data-key="${state.openSubAccordion.id.split('-')[1]}"]`);
+                               if(oldSubButton) {
+                                   oldSubButton.setAttribute('aria-expanded', 'false');
+                                   oldSubButton.parentElement.classList.remove('active');
+                               }
+                               state.openSubAccordion = null;
+                            }
+                        }
+                        
+                        content.classList.toggle('open', isOpening);
+                        button.setAttribute('aria-expanded', isOpening);
+                        button.parentElement.classList.toggle('active', isOpening);
+                        state.openAccordion = isOpening ? content : null;
+                    }
+                },
+
+                /**
+                 * Alterna a visibilidade de uma seção principal.
+                 * @param {HTMLButtonElement} header - O cabeçalho da seção.
+                 */
+                toggleMainSection(header) {
+                    const content = header.nextElementSibling;
+                    const { state } = ChargenStudio;
+
+                    if (!content) return;
+                    
+                    const isOpening = !content.classList.contains('open');
+
+                    if (state.openMainSection && state.openMainSection !== content) {
+                        state.openMainSection.classList.remove('open');
+                        const oldHeader = state.openMainSection.previousElementSibling;
+                        oldHeader.classList.remove('active');
+                        oldHeader.setAttribute('aria-expanded', 'false');
+                    }
+
+                    content.classList.toggle('open');
+                    header.classList.toggle('active', isOpening);
+                    header.setAttribute('aria-expanded', isOpening);
+
+                    state.openMainSection = isOpening ? content : null;
+                },
+
+                // Funções de renderização da UI
+                render: {
+                    /**
+                     * Renderiza todas as categorias na barra lateral.
+                     */
+                    allCategories() {
+                        const container = document.getElementById('categories-container');
+                        if(!container) return;
+                        container.innerHTML = '';
+                        const { config } = ChargenStudio;
+                        
+                        const allCategories = Object.entries(config.formSections).map(([key, value]) => ({ id: key, ...value }));
+
+                        const fragment = document.createDocumentFragment();
+                        allCategories.forEach(cat => {
+                            const wrapper = document.createElement('div');
+                            wrapper.innerHTML = this._createAccordionButtonHTML(cat.id, cat.title, cat.icon);
+                            const contentElement = wrapper.querySelector('.accordion-content');
+                            contentElement.innerHTML = this._createFormContentHTML(cat.id);
+                            fragment.appendChild(wrapper.firstElementChild);
+                        });
+                        container.appendChild(fragment);
+
+                        this._populateAllSelects();
+                        this._populatePresets();
+                    },
+
+                    /**
+                     * Gera o HTML para um botão de acordeão.
+                     * @private
+                     */
+                    _createAccordionButtonHTML(key, title, icon) {
+                        return `<div class="category-wrapper">
+                                    <button data-key="${key}" class="category-button w-full flex items-center justify-start p-3 bg-stone-800 rounded-lg shadow-md hover:bg-stone-700/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 h-full" aria-expanded="false" aria-controls="accordion-${key}">
+                                        ${icon} <span class="ml-3 text-sm font-semibold text-stone-300">${title}</span>
+                                    </button>
+                                    <div id="accordion-${key}" class="accordion-content bg-stone-800/50 rounded-b-lg px-4 -mt-1" role="region"></div>
+                                </div>`;
+                    },
+
+                    /**
+                     * Gera o HTML para o conteúdo de um acordeão de estilo.
+                     * @private
+                     */
+                    _createStyleContentHTML(key, listSource) {
+                        const items = listSource[key].items;
+                        const sortedItems = [...items].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+                        
+                        const itemsHTML = sortedItems.map(itemText => {
+                            let term = itemText, description = '';
+                            const match = itemText.match(/(.*?)\s*\(([^)]+)\)/);
+                            if (match) { [ , term, description] = match.map(s => s.trim()); }
+
+                            const isSelected = ChargenStudio.state.styleSelectedTerms.has(term) ? 'selected-item' : '';
+                            return `<div class="tooltip w-full">
+                                        <a href="#" class="style-term-item block w-full px-3 py-1.5 text-sm text-stone-200 hover:bg-emerald-500/50 rounded-md ${isSelected}" data-term="${term}">
+                                            ${term}
+                                        </a>
+                                        ${description ? `<span class="tooltip-text">${description}</span>` : ''}
+                                    </div>`;
+                        }).join('');
+                        
+                        return `<div class="max-h-64 overflow-y-auto">${itemsHTML}</div>`;
+                    },
+
+                    _createSubAccordionHTML(key, title, icon) {
+                        return `<div class="category-wrapper pl-4">
+                                    <button data-key="${key}" class="subcategory-button w-full flex items-center justify-start p-2 bg-stone-700/50 rounded-lg shadow-md hover:bg-stone-600/50 focus:outline-none focus:ring-1 focus:ring-emerald-600 transition-all duration-200 h-full" aria-expanded="false" aria-controls="accordion-${key}">
+                                        ${icon} <span class="ml-2 text-xs font-semibold text-stone-300">${title}</span>
+                                    </button>
+                                    <div id="accordion-${key}" class="accordion-content bg-stone-700/20 rounded-b-lg px-3 -mt-1" role="region"></div>
+                                </div>`;
+                    },
+
+                    /**
+                     * Gera o HTML para o conteúdo de um acordeão de formulário.
+                     * @private
+                     */
+                    _createFormContentHTML(sectionKey) {
+                        const section = ChargenStudio.config.formSections[sectionKey];
+                        let contentHTML = '<div class="space-y-4">';
+                        
+                        // Render regular fields
+                        if (section.fields) {
+                            for (const [fieldKey, field] of Object.entries(section.fields)) {
+                                contentHTML += `<div><label for="${fieldKey}" class="block text-xs font-medium text-stone-400 mb-1">${field.label}</label>`;
+                                switch (field.type) {
+                                    case 'select':
+                                        contentHTML += `<select id="${fieldKey}" name="${fieldKey}"></select>`;
+                                        break;
+                                    case 'text':
+                                        contentHTML += `<input type="text" id="${fieldKey}" name="${fieldKey}" placeholder="${field.placeholder || ''}">`;
+                                        break;
+                                    case 'text-ia':
+                                        contentHTML += `<div class="flex items-center">
+                                                          <input type="text" id="${fieldKey}" name="${fieldKey}">
+                                                          <button type="button" id="${field.buttonId}" title="Gerar com IA" class="ai-suggestion-btn">✨<div id="${field.loaderId}" class="loader small-loader ml-1 hidden"></div></button>
+                                                      </div>`;
+                                        break;
+                                    case 'textarea':
+                                        contentHTML += `<textarea id="${fieldKey}" name="${fieldKey}" rows="${field.rows || 3}" placeholder="${field.placeholder || ''}"></textarea>`;
+                                        break;
+                                    case 'textarea-ia':
+                                        let btnText = 'Gerar com IA';
+                                        if (field.buttonId === 'generateBackstoryBtn') btnText = 'Gerar História';
+                                        if (field.buttonId === 'generateObjetivosBtn') btnText = 'Gerar Objetivos';
+                                        contentHTML += `<textarea id="${fieldKey}" name="${fieldKey}" rows="${field.rows || 5}" placeholder="${field.placeholder || ''}"></textarea>
+                                                      <button type="button" id="${field.buttonId}" class="mt-1 w-full text-xs bg-lime-600 hover:bg-lime-700 text-white font-semibold py-1 px-2 rounded-lg flex items-center justify-center">${btnText} <div id="${field.loaderId}" class="loader small-loader ml-2 hidden"></div></button>`;
+                                        break;
+                                }
+                                contentHTML += `</div>`;
+                            }
+                        }
+
+                        // Render subcategories if they exist
+                        if (section.subcategories) {
+                             contentHTML += '<div class="space-y-2 mt-4">';
+                             for (const [subKey, subCat] of Object.entries(section.subcategories)) {
+                                const subAccordionWrapper = document.createElement('div');
+                                subAccordionWrapper.innerHTML = this._createSubAccordionHTML(subKey, subCat.title, subCat.icon);
+                                const subContentElement = subAccordionWrapper.querySelector('.accordion-content');
+                                subContentElement.innerHTML = this._createStyleContentHTML(subKey, section.subcategories);
+                                contentHTML += subAccordionWrapper.innerHTML;
+                             }
+                             contentHTML += '</div>';
+                        }
+
+                        return contentHTML + '</div>';
+                    },
+                    
+                    /**
+                     * Preenche todos os campos 'select' com suas opções.
+                     * @private
+                     */
+                    _populateAllSelects() {
+                        const { formSections } = ChargenStudio.config;
+                        Object.values(formSections).forEach(section => {
+                            for (const [fieldKey, field] of Object.entries(section.fields)) {
+                                if (field.type === 'select') {
+                                    const selectElement = document.getElementById(fieldKey);
+                                    if (!selectElement) continue;
+
+                                    selectElement.innerHTML = '';
+                                    if (field.hasOptgroups) {
+                                        for (const [groupLabel, options] of Object.entries(field.options)) {
+                                            const optgroup = document.createElement('optgroup');
+                                            optgroup.label = groupLabel;
+                                            options.forEach(optVal => {
+                                                const option = new Option(optVal, `${groupLabel}|${optVal}`);
+                                                optgroup.appendChild(option);
+                                            });
+                                            selectElement.appendChild(optgroup);
+                                        }
+                                    } else {
+                                        field.options.forEach(optVal => selectElement.add(new Option(optVal, optVal)));
+                                    }
+                                }
+                            }
+                        });
+                    },
+                    
+                    /**
+                     * Preenche o seletor de presets.
+                     * @private
+                     */
+                    _populatePresets() {
+                        const presetSelect = document.getElementById('presets');
+                        if (!presetSelect) return;
+                        
+                        presetSelect.innerHTML = '<option value="">Selecione um preset...</option>';
+                        Object.entries(ChargenStudio.config.presets).forEach(([key, preset]) => {
+                             const presetName = preset.nomePersonagem || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                             presetSelect.add(new Option(presetName, key));
+                        });
+                    },
+                    
+                    /**
+                     * Atualiza a UI dos termos de estilo para refletir o estado atual.
+                     */
+                    updateStyleTermSelection() {
+                        document.querySelectorAll('.style-term-item').forEach(el => {
+                            el.classList.toggle('selected-item', ChargenStudio.state.styleSelectedTerms.has(el.dataset.term));
+                        });
+                    }
+                }
+            },
+            
+            // Funções de lógica de negócio
+            logic: {
+                /**
+                 * Gera um prompt com base nos dados do formulário.
+                 * @param {'compacto'|'detalhado'} type - O tipo de prompt a ser gerado.
+                 */
+                generatePrompt(type) {
+                    const formData = this.getFormDataAsObject();
+                    let promptParts = [];
+                    let finalPrompt;
+                    const addPart = (part) => {
+                        if (part && typeof part === 'string' && part.trim() && part.trim() !== 'Não especificado') {
+                            promptParts.push(part.trim());
+                        }
+                    };
+
+                    if (type === 'compacto') {
+                        addPart('retrato de corpo inteiro');
+                        addPart(formData.nomePersonagem); addPart(formData.racaEspecie); addPart(formData.arquetipo);
+                        addPart(formData.profissao); addPart(formData.genero); addPart(formData.tipoCorpo);
+                        if (formData.corPele) addPart(`${formData.corPele} pele`);
+                        addPart(formData.penteado);
+                        if (formData.corCabelo) addPart(`${formData.corCabelo} cabelo`);
+                        if (formData.corOlhos) addPart(`${formData.corOlhos} olhos`);
+                        addPart(formData.caracteristicasFisicas); addPart(formData.texturaPele);
+                        if (formData.tipoAsas && formData.tipoAsas !== 'Sem Asas') addPart(`${formData.tipoAsas} asas`);
+                        if (formData.tipoCauda && formData.tipoCauda !== 'Sem Cauda') addPart(`${formData.tipoCauda} cauda`);
+                        if (formData.tipoChifres && formData.tipoChifres !== 'Sem Chifres') addPart(`${formData.tipoChifres} chifres`);
+                        addPart(formData.vestimentaPrincipal); addPart(formData.armadura); addPart(formData.armas);
+                        addPart(formData.tracoPrincipal); addPart(formData.habilidadeUnica); addPart(formData.acaoPose);
+                        addPart(formData.expressaoFacial); addPart(formData.cenarioDetalhado); addPart(formData.temaGeral);
+                        if (formData.inspiracaoArtista) addPart(`por ${formData.inspiracaoArtista}`);
+                        addPart(formData.movimentoArtistico); addPart(formData.enquadramentoCamera); addPart(formData.estiloLente);
+                        addPart(formData.efeitosVisuais); addPart(formData.iluminacaoAtmosfera);
+                        if (formData.styleSelectedTerms.length > 0) promptParts.push(...formData.styleSelectedTerms);
+                        addPart(document.getElementById('rascunhoTextarea').value.trim());
+                        finalPrompt = promptParts.filter(p => p).join(', ');
+                    } else { // 'detalhado'
+                         let subjectParts = ["Retrato de corpo inteiro", `de ${formData.nomePersonagem || 'um personagem'}`];
+                         if (formData.racaEspecie) subjectParts.push(`, um(a) ${formData.racaEspecie}`);
+                         if (formData.arquetipo) subjectParts.push(formData.arquetipo);
+                         if (formData.profissao) subjectParts.push(`, ${formData.profissao}`);
+                         if (formData.genero && formData.genero !== 'Não especificado') subjectParts.push(`do gênero ${formData.genero}`);
+                         addPart(subjectParts.join(' '));
+
+                         let appearanceParts = [];
+                         if(formData.tipoCorpo) appearanceParts.push(`com corpo ${formData.tipoCorpo}`);
+                         if(formData.corPele) appearanceParts.push(`pele ${formData.corPele}`);
+                         if(formData.penteado) appearanceParts.push(`penteado ${formData.penteado}`);
+                         if(formData.corCabelo) appearanceParts.push(`cabelo ${formData.corCabelo}`);
+                         if(formData.corOlhos) appearanceParts.push(`olhos da cor ${formData.corOlhos}`);
+                         if(formData.caracteristicasFisicas) appearanceParts.push(formData.caracteristicasFisicas);
+                         if(formData.texturaPele) appearanceParts.push(`textura de pele ${formData.texturaPele}`);
+                         if(formData.tipoAsas && formData.tipoAsas !== 'Sem Asas') appearanceParts.push(`com asas do tipo ${formData.tipoAsas}`);
+                         if(formData.tipoCauda && formData.tipoCauda !== 'Sem Cauda') appearanceParts.push(`com cauda ${formData.tipoCauda}`);
+                         if(formData.tipoChifres && formData.tipoChifres !== 'Sem Chifres') appearanceParts.push(`com chifres ${formData.tipoChifres}`);
+                         addPart(appearanceParts.join(", "));
+
+                         let gearParts = [];
+                         if(formData.vestimentaPrincipal) gearParts.push(`vestindo ${formData.vestimentaPrincipal}`);
+                         if(formData.armadura) gearParts.push(`com ${formData.armadura}`);
+                         if(formData.armas) gearParts.push(`empunhando ${formData.armas}`);
+                         addPart(gearParts.join(", "));
+
+                         let personaParts = [];
+                         if(formData.tracoPrincipal) personaParts.push(`${formData.tracoPrincipal}`);
+                         if(formData.motivacao) personaParts.push(`motivado(a) por ${formData.motivacao}`);
+                         if(formData.fontePoder) personaParts.push(`usando poderes de ${formData.fontePoder}`);
+                         if(formData.escolaMagia) personaParts.push(`com domínio sobre ${formData.escolaMagia}`);
+                         if(formData.habilidadeUnica) personaParts.push(`sua habilidade é ${formData.habilidadeUnica}`);
+                         addPart(personaParts.join(", "));
+
+                         let narrativeParts = [];
+                         if(formData.acaoPose) narrativeParts.push(`em pose de ${formData.acaoPose}`);
+                         if(formData.expressaoFacial) narrativeParts.push(`com expressão ${formData.expressaoFacial}`);
+                         if(formData.cenarioDetalhado) narrativeParts.push(`no cenário de ${formData.cenarioDetalhado}`);
+                         if(formData.temaGeral) narrativeParts.push(`em um tema de ${formData.temaGeral}`);
+                         addPart(narrativeParts.join(", "));
+
+                         let visualStyleParts = [];
+                         if (formData.inspiracaoArtista) visualStyleParts.push(`no estilo de ${formData.inspiracaoArtista}`);
+                         if (formData.movimentoArtistico) visualStyleParts.push(`${formData.movimentoArtistico}`);
+                         if (formData.enquadramentoCamera) visualStyleParts.push(`enquadramento ${formData.enquadramentoCamera}`);
+                         if (formData.estiloLente) visualStyleParts.push(`com lente ${formData.estiloLente}`);
+                         if (formData.efeitosVisuais) visualStyleParts.push(`efeitos de ${formData.efeitosVisuais}`);
+                         if (formData.iluminacaoAtmosfera) visualStyleParts.push(`iluminação ${formData.iluminacaoAtmosfera}`);
+                         addPart(visualStyleParts.join(", "));
+                         
+                         if (formData.styleSelectedTerms.length > 0) addPart(`estilos adicionais: ${formData.styleSelectedTerms.join(', ')}`);
+                         addPart(document.getElementById('rascunhoTextarea').value.trim());
+
+                         finalPrompt = promptParts.filter(p => p).join(". ");
+                    }
+                    
+                    const promptNegativo = formData.promptNegativo || "deformado, texto, watermark, feio, duplicado, má qualidade, baixa resolução";
+                    finalPrompt += ` --no ${promptNegativo}`;
+                    finalPrompt = finalPrompt.replace(/[,.]\s*--no/, ' --no').replace(/,\s*$/, '').trim();
+
+                    document.getElementById('generatedPrompt').value = finalPrompt;
+                    ChargenStudio.ui.showToast(promptParts.length > 0 ? `Prompt ${type} gerado!` : 'Nenhuma informação selecionada.', promptParts.length > 0 ? 'success' : 'warning');
+                },
+                
+                /**
+                 * Coleta todos os dados do formulário em um objeto.
+                 * @returns {object} - O objeto com os dados do personagem.
+                 */
+                getFormDataAsObject() {
+                    const data = {};
+                    new FormData(document.getElementById('characterForm')).forEach((value, key) => {
+                        if (value && value !== "Não especificado" && !value.endsWith("|Não especificado")) {
+                           data[key] = value.includes('|') ? value.split('|')[1] : value;
+                        }
+                    });
+                    data.styleSelectedTerms = Array.from(ChargenStudio.state.styleSelectedTerms);
+                    data.rascunhoTextarea = document.getElementById('rascunhoTextarea').value;
+                    return data;
+                },
+
+                /**
+                 * Preenche o formulário com dados de um objeto.
+                 * @param {object} data - O objeto de dados do personagem.
+                 */
+                fillFormWithData(data) {
+                    this.clearAllFields(false);
+                    const form = document.getElementById('characterForm');
+
+                    for(const [key, value] of Object.entries(data)){
+                        if (key === 'styleSelectedTerms') {
+                            const terms = value.map(item => {
+                                const match = item.match(/(.*?)\s*\(/);
+                                return match ? match[1].trim() : item;
+                            });
+                            ChargenStudio.state.styleSelectedTerms = new Set(terms);
+                        } else if (key === 'rascunhoTextarea') {
+                             document.getElementById('rascunhoTextarea').value = value || '';
+                        } else if (form.elements[key]){
+                            const element = form.elements[key];
+                            if (element.tagName === 'SELECT') {
+                                 let foundOption = Array.from(element.options).find(opt => 
+                                     (opt.textContent === value) || 
+                                     (opt.value.includes('|') ? opt.value.split('|')[1] === value : opt.value === value)
+                                 );
+                                 if (foundOption) element.value = foundOption.value;
+                            } else {
+                                element.value = value;
+                            }
+                        }
+                    }
+                    ChargenStudio.ui.render.updateStyleTermSelection();
+                },
+
+                /**
+                 * Limpa todos os campos do formulário e o estado da aplicação.
+                 * @param {boolean} [notify=true] - Se deve exibir uma notificação.
+                 */
+                clearAllFields(notify = true) {
+                    document.getElementById('characterForm').reset();
+                    document.getElementById('generatedPrompt').value = '';
+                    document.getElementById('rascunhoTextarea').value = '';
+                    
+                    ChargenStudio.state.styleSelectedTerms.clear();
+                    ChargenStudio.ui.render.updateStyleTermSelection();
+
+                    const imagePreview = document.getElementById('imagePreview');
+                    imagePreview.classList.add('hidden');
+                    imagePreview.src = "#";
+                    document.getElementById('imagePreviewPlaceholder').classList.remove('hidden');
+                    document.getElementById('imageUpload').value = ''; 
+                    ChargenStudio.state.base64ImageData = null;
+
+                    const genImagePreview = document.getElementById('generatedImagePreview');
+                    const genImagePlaceholder = document.getElementById('generatedImagePlaceholder');
+                    genImagePreview.classList.add('hidden');
+                    genImagePreview.src = "#";
+                    genImagePlaceholder.textContent = "A imagem gerada aparecerá aqui...";
+                    genImagePlaceholder.classList.remove('hidden');
+                    
+                    if (notify) ChargenStudio.ui.showToast('Todos os campos foram limpos!', 'info');
+                },
+
+                /**
+                 * Copia um texto para a área de transferência.
+                 * @param {string} text - O texto a ser copiado.
+                 */
+                copyToClipboard(text) {
+                    if (!text) {
+                        ChargenStudio.ui.showToast('Nada para copiar.', 'warning');
+                        return;
+                    }
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy') 
+                          ? ChargenStudio.ui.showToast('Copiado para a área de transferência!', 'success')
+                          : ChargenStudio.ui.showToast('Falha ao copiar.', 'error');
+                    } catch (err) {
+                        ChargenStudio.ui.showToast('Erro ao copiar.', 'error');
+                    }
+                    document.body.removeChild(textArea);
+                },
+
+                /**
+                 * Interpreta a resposta de texto da IA e preenche o formulário.
+                 * @param {string} apiResponseText - A resposta da API.
+                 */
+                parseAndFillForm(apiResponseText) {
+                    const data = {};
+                    apiResponseText.split('\n').forEach(line => {
+                        const parts = line.split(': ');
+                        if (parts.length > 1) {
+                            data[parts[0].trim().toLowerCase().replace(/\*/g, '')] = parts.slice(1).join(': ').trim();
+                        }
+                    });
+
+                    const fieldMappings = {
+                        'nome': 'nomePersonagem', 'gênero': 'genero', 'gênero aparente': 'genero', 'raça/espécie': 'racaEspecie',
+                        'arquétipo': 'arquetipo', 'profissão/função': 'profissao', 'tipo de corpo': 'tipoCorpo', 'cor da pele': 'corPele',
+                        'cor do cabelo': 'corCabelo', 'penteado': 'penteado', 'cor dos olhos': 'corOlhos', 'vestimenta principal': 'vestimentaPrincipal',
+                        'armadura': 'armadura', 'arma': 'armas', 'arma principal': 'armas', 'ação/pose': 'acaoPose', 'pose': 'acaoPose',
+                        'expressão facial': 'expressaoFacial', 'cenário': 'cenarioDetalhado', 'cenário imediato': 'cenarioDetalhado',
+                        'tema': 'temaGeral', 'descrição geral detalhada': 'caracteristicasFisicas', 'características essenciais': 'caracteristicasFisicas',
+                        'traço principal': 'tracoPrincipal', 'motivação': 'motivacao'
+                    };
+
+                    const partialData = {};
+                    for (const [key, value] of Object.entries(data)) {
+                        const formFieldId = fieldMappings[key];
+                        if (formFieldId) {
+                            partialData[formFieldId] = value;
+                        }
+                    }
+                    this.fillFormWithData({ ...this.getFormDataAsObject(), ...partialData });
+                },
+
+                // Lógica de salvamento e carregamento
+                saveCharacter() {
+                    const charData = this.getFormDataAsObject();
+                    const charName = charData.nomePersonagem || 'personagem_chargen';
+                    const filename = `${charName.replace(/[\s/\\?%*:|"<>]/g, '_').toLowerCase()}.json`;
+                    const dataStr = JSON.stringify(charData, null, 2);
+                    
+                    const blob = new Blob([dataStr], { type: "application/json;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    link.remove();
+                    ChargenStudio.ui.showToast(`Personagem salvo como ${filename}!`, 'success');
+                },
+
+                loadCharacter(file) {
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const charData = JSON.parse(e.target.result);
+                            this.fillFormWithData(charData);
+                            ChargenStudio.ui.showToast(`Personagem carregado!`, 'success');
+                        } catch (error) {
+                            ChargenStudio.ui.showToast('Erro: Arquivo inválido ou malformado.', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            },
+            
+            // Funções de configuração de eventos
+            events: {
+                /**
+                 * Configura todos os ouvintes de eventos da aplicação.
+                 */
+                setup() {
+                    // Eventos da barra lateral e acordeões
+                    document.getElementById('categories-container').addEventListener('click', (e) => {
+                        const categoryButton = e.target.closest('.category-button');
+                        const subcategoryButton = e.target.closest('.subcategory-button');
+
+                        if (categoryButton) {
+                            e.preventDefault();
+                            ChargenStudio.ui.toggleAccordion(categoryButton, false);
+                            this.setupDynamicButtonListeners(categoryButton.dataset.key);
+                        } else if (subcategoryButton) {
+                            e.preventDefault();
+                            ChargenStudio.ui.toggleAccordion(subcategoryButton, true);
+                        }
+                        
+                        if (e.target.matches('.style-term-item')) {
+                            e.preventDefault();
+                            const term = e.target.dataset.term;
+                            e.target.classList.toggle('selected-item');
+                            const { styleSelectedTerms } = ChargenStudio.state;
+                            styleSelectedTerms.has(term) ? styleSelectedTerms.delete(term) : styleSelectedTerms.add(term);
+                        }
+                    });
+
+                    // Eventos das seções principais
+                    document.querySelectorAll('.main-section-header').forEach(header => {
+                        header.addEventListener('click', () => ChargenStudio.ui.toggleMainSection(header));
+                    });
+
+                    // Eventos dos botões de prompt
+                    document.getElementById('generateCompactPromptBtn').addEventListener('click', () => ChargenStudio.logic.generatePrompt('compacto'));
+                    document.getElementById('generateDetailedPromptBtn').addEventListener('click', () => ChargenStudio.logic.generatePrompt('detalhado'));
+                    document.getElementById('copyPromptBtn').addEventListener('click', () => ChargenStudio.logic.copyToClipboard(document.getElementById('generatedPrompt').value));
+                    document.getElementById('randomizeAllBtn').addEventListener('click', () => {
+                        const { presets } = ChargenStudio.config;
+                        const presetKeys = Object.keys(presets);
+                        const randomKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+                        ChargenStudio.logic.fillFormWithData(presets[randomKey]);
+                        ChargenStudio.ui.showToast('Preset aleatório aplicado!', 'info');
+                    });
+                    document.getElementById('clearAllBtn').addEventListener('click', () => ChargenStudio.logic.clearAllFields(true));
+                    
+                    // Eventos de menus móveis e rascunho
+                    this.setupSidebars();
+
+                    // Eventos de análise de IA
+                    this.setupImageAnalysis();
+                    this.setupTextAnalysis();
+                    document.getElementById('generateImagePreviewBtn').addEventListener('click', this.handleGenerateImagePreview);
+
+                    // Eventos de gerenciamento
+                    this.setupFileManagement();
+                    this.setupThemeSwitcher();
+                    this.setupSettingsModal();
+                },
+
+                setupSettingsModal() {
+                    const settingsBtn = document.getElementById('settings-btn');
+                    const closeSettingsBtn = document.getElementById('close-settings-btn');
+                    const saveSettingsBtn = document.getElementById('save-settings-btn');
+                    const settingsModal = document.getElementById('settings-modal');
+                    
+                    const textApiProvider = document.getElementById('text-api-provider');
+                    const imageApiProvider = document.getElementById('image-api-provider');
+
+                    const googleApiKeyContainer = document.getElementById('google-api-key-container');
+                    const huggingfaceApiKeyContainer = document.getElementById('huggingface-api-key-container');
+                    const clipdropApiKeyContainer = document.getElementById('clipdrop-api-key-container');
+
+                    // --- Logic to open/close modal ---
+                    settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+                    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+                    
+                    // --- Logic to show/hide API key fields based on provider selection ---
+                    textApiProvider.addEventListener('change', (e) => {
+                        googleApiKeyContainer.classList.toggle('hidden', e.target.value !== 'google');
+                        huggingfaceApiKeyContainer.classList.toggle('hidden', e.target.value !== 'huggingface');
+                    });
+
+                    imageApiProvider.addEventListener('change', (e) => {
+                        clipdropApiKeyContainer.classList.toggle('hidden', e.target.value !== 'clipdrop');
+                    });
+
+                    // --- Logic to save settings ---
+                    saveSettingsBtn.addEventListener('click', () => {
+                        const settings = {
+                            textProvider: textApiProvider.value,
+                            imageProvider: imageApiProvider.value,
+                            googleApiKey: document.getElementById('google-api-key').value,
+                            huggingfaceApiKey: document.getElementById('huggingface-api-key').value,
+                            huggingfaceProvider: document.getElementById('huggingface-provider').value,
+                            huggingfaceTaskType: document.getElementById('huggingface-task-type').value,
+                            huggingfaceModelId: document.getElementById('huggingface-model-id').value,
+                            clipdropApiKey: document.getElementById('clipdrop-api-key').value,
+                        };
+                        localStorage.setItem('chargen-settings', JSON.stringify(settings));
+                        settingsModal.classList.add('hidden');
+                        ChargenStudio.ui.showToast('Configurações salvas!', 'success');
+                    });
+
+                    // --- Logic to load settings on startup ---
+                    const loadSettings = () => {
+                        const savedSettings = JSON.parse(localStorage.getItem('chargen-settings')) || {};
+                        textApiProvider.value = savedSettings.textProvider || 'google';
+                        imageApiProvider.value = savedSettings.imageProvider || 'google';
+                        document.getElementById('google-api-key').value = savedSettings.googleApiKey || '';
+                        document.getElementById('huggingface-api-key').value = savedSettings.huggingfaceApiKey || '';
+                        document.getElementById('huggingface-provider').value = savedSettings.huggingfaceProvider || 'huggingface';
+                        document.getElementById('huggingface-task-type').value = savedSettings.huggingfaceTaskType || 'text-generation';
+                        document.getElementById('huggingface-model-id').value = savedSettings.huggingfaceModelId || '';
+                        document.getElementById('clipdrop-api-key').value = savedSettings.clipdropApiKey || '';
+                        
+                        // Trigger change events to show correct fields
+                        textApiProvider.dispatchEvent(new Event('change'));
+                        imageApiProvider.dispatchEvent(new Event('change'));
+                    };
+                    loadSettings();
+                },
+
+                setupThemeSwitcher() {
+                    const themeSwitcher = document.getElementById('theme-switcher');
+                    const themeIconLight = document.getElementById('theme-icon-light');
+                    const themeIconDark = document.getElementById('theme-icon-dark');
+
+                    themeSwitcher.addEventListener('click', () => {
+                        document.body.classList.toggle('theme-light');
+                        const isLight = document.body.classList.contains('theme-light');
+                        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                        themeIconLight.classList.toggle('hidden', !isLight);
+                        themeIconDark.classList.toggle('hidden', isLight);
+                    });
+                },
+                
+                /**
+                 * Configura os ouvintes de eventos para botões gerados dinamicamente.
+                 * @param {string} key - A chave da seção do acordeão.
+                 */
+                setupDynamicButtonListeners(key) {
+                    const listeners = {
+                        'aparencia': { 'generateNameBtn': this.handleGenerateName },
+                        'poderes': { 'generateHabilidadeBtn': this.handleGenerateAbility },
+                        'desenvolvimento': { 
+                            'generateBackstoryBtn': this.handleGenerateBackstory,
+                            'generateObjetivosBtn': this.handleGenerateGoals 
+                        }
+                    };
+                    if (listeners[key]) {
+                        for(const [btnId, handler] of Object.entries(listeners[key])) {
+                            const btn = document.getElementById(btnId);
+                            // Remove listener antigo para evitar duplicação e adiciona o novo
+                            if(btn) btn.replaceWith(btn.cloneNode(true));
+                            document.getElementById(btnId)?.addEventListener('click', handler);
+                        }
+                    }
+                },
+                
+                setupSidebars() {
+                    const hamburgerBtn = document.getElementById('hamburger-btn');
+                    const sideMenu = document.getElementById('sidebar');
+                    const closeMenuBtn = document.getElementById('close-sidebar-btn');
+                    hamburgerBtn.addEventListener('click', () => sideMenu.classList.remove('-translate-x-full'));
+                    closeMenuBtn.addEventListener('click', () => sideMenu.classList.add('-translate-x-full'));
+                    
+                    const openRascunhoBtn = document.getElementById('openRascunhoBtn');
+                    const closeRascunhoBtn = document.getElementById('closeRascunhoBtn');
+                    const rascunhoSidebar = document.getElementById('rascunhoSidebar');
+                    openRascunhoBtn.addEventListener('click', () => { rascunhoSidebar.classList.remove('translate-x-full'); openRascunhoBtn.classList.add('hidden'); });
+                    closeRascunhoBtn.addEventListener('click', () => { rascunhoSidebar.classList.add('translate-x-full'); openRascunhoBtn.classList.remove('hidden'); });
+                    
+                    document.getElementById('addRascunhoToPromptBtn').addEventListener('click', () => {
+                        const promptTextarea = document.getElementById('generatedPrompt');
+                        const rascunhoText = document.getElementById('rascunhoTextarea').value.trim();
+                        if(rascunhoText){
+                            promptTextarea.value += (promptTextarea.value ? ', ' : '') + rascunhoText;
+                            ChargenStudio.ui.showToast('Rascunho adicionado!', 'success');
+                        }
+                    });
+                    document.getElementById('clearRascunhoBtn').addEventListener('click', () => {
+                        document.getElementById('rascunhoTextarea').value = '';
+                        ChargenStudio.ui.showToast('Rascunho limpo.', 'info');
+                    });
+                },
+
+                setupImageAnalysis() {
+                    const imageUpload = document.getElementById('imageUpload');
+                    imageUpload.addEventListener('change', (event) => {
+                        const file = event.target.files[0];
+                        if (!file) {
+                           ChargenStudio.state.base64ImageData = null;
+                           return;
+                        }
+                        if (file.size > 4 * 1024 * 1024) { 
+                            ChargenStudio.ui.showToast('Erro: Imagem excede 4MB.', 'error');
+                            imageUpload.value = ''; 
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            document.getElementById('imagePreview').src = e.target.result;
+                            document.getElementById('imagePreview').classList.remove('hidden');
+                            document.getElementById('imagePreviewPlaceholder').classList.add('hidden');
+                            ChargenStudio.state.base64ImageData = e.target.result.split(',')[1]; 
+                        }
+                        reader.readAsDataURL(file);
+                    });
+                    document.getElementById('analyzeImageBtn').addEventListener('click', this.handleAnalyzeImage);
+                },
+
+                setupTextAnalysis() {
+                    const fileInput = document.getElementById('analyzeTxtFileInput');
+                    document.getElementById('analyzeTxtAndFillBtn').addEventListener('click', () => fileInput.click());
+                    fileInput.addEventListener('change', (event) => {
+                        const file = event.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (e) => this.handleAnalyzeText(e.target.result);
+                        reader.readAsText(file);
+                        event.target.value = ''; 
+                    });
+                },
+
+                setupFileManagement() {
+                    document.getElementById('saveCharacterBtn').addEventListener('click', () => ChargenStudio.logic.saveCharacter());
+                    document.getElementById('loadCharacterBtn').addEventListener('click', () => document.getElementById('loadCharacterFileInput').click());
+                    document.getElementById('loadCharacterFileInput').addEventListener('change', (e) => ChargenStudio.logic.loadCharacter(e.target.files[0]));
+                    document.getElementById('applyPresetBtn').addEventListener('click', () => {
+                        const key = document.getElementById('presets').value;
+                        if (key && ChargenStudio.config.presets[key]) {
+                            ChargenStudio.logic.fillFormWithData(ChargenStudio.config.presets[key]);
+                            ChargenStudio.ui.showToast('Preset aplicado!', 'success');
+                        }
+                    });
+                },
+
+                // Handlers de eventos de IA
+                async handleGenerateIAContent(promptText, elementId, loaderId, buttonId, toastMessage) {
+                    const { api } = ChargenStudio;
+                    const resultText = await api.generateText(promptText, loaderId, buttonId);
+                    if (resultText) {
+                        document.getElementById(elementId).value = resultText.trim().replace(/["*.]/g, '');
+                        if (toastMessage) ChargenStudio.ui.showToast(toastMessage, 'success');
+                    }
+                },
+                handleGenerateName() {
+                    const raca = document.getElementById('racaEspecie').selectedOptions[0]?.textContent || "personagem";
+                    const genero = document.getElementById('genero').value;
+                    const prompt = `Sugira um nome criativo para um(a) personagem ${raca}${genero !== 'Não especificado' ? ` do gênero ${genero}` : ''}. Forneça apenas o nome, sem frases ou aspas.`;
+                    ChargenStudio.events.handleGenerateIAContent(prompt, 'nomePersonagem', 'nameLoader', 'generateNameBtn', 'Nome gerado!');
+                },
+                handleGenerateAbility() {
+                    const context = ChargenStudio.logic.getFormDataAsObject();
+                    const prompt = `Sugira um nome para uma habilidade única para um(a) ${context.profissao || 'personagem'} com poderes da escola de ${context.escolaMagia || 'magia'} e fonte de poder ${context.fontePoder || 'desconhecida'}. Consistente com seu traço principal: ${context.tracoPrincipal || 'não definido'}. Apenas o nome da habilidade.`;
+                    ChargenStudio.events.handleGenerateIAContent(prompt, 'habilidadeUnica', 'habilidadeLoader', 'generateHabilidadeBtn', 'Habilidade gerada!');
+                },
+                handleGenerateBackstory() {
+                    const context = ChargenStudio.logic.getFormDataAsObject();
+                    const prompt = `Crie uma breve história de fundo (2-3 parágrafos) para:
+                    - Nome: ${context.nomePersonagem || 'um personagem sem nome'}
+                    - Raça/Arquétipo: um(a) ${context.racaEspecie || 'ser'} do tipo ${context.arquetipo || 'desconhecido'}.
+                    - Personalidade: Traço principal ${context.tracoPrincipal || 'desconhecido'}, motivado(a) por ${context.motivacao || 'algo incerto'}.
+                    - Cenário: A história se passa em um(a) ${context.cenarioDetalhado || 'local não especificado'}.
+                    Escreva uma história coesa.`;
+                    ChargenStudio.events.handleGenerateIAContent(prompt, 'historiaFundoGerada', 'backstoryLoader', 'generateBackstoryBtn', 'História gerada!');
+                },
+                 handleGenerateGoals() {
+                    const context = ChargenStudio.logic.getFormDataAsObject();
+                    const prompt = `Baseado na personalidade (traço: ${context.tracoPrincipal}, motivação: ${context.motivacao}, medos: ${context.medo}), sugira 2 ou 3 objetivos para o personagem. Liste-os separados por vírgula.`;
+                    ChargenStudio.events.handleGenerateIAContent(prompt, 'objetivosPersonagem', 'objetivosLoader', 'generateObjetivosBtn', 'Objetivos gerados!');
+                },
+                async handleAnalyzeImage() {
+                    // This function uses a multi-modal prompt (text + image) which is specific to Google Gemini.
+                    // For now, it will remain tied to the Google API directly until other providers with this
+                    // specific capability are fully integrated.
+                    const { state, api, config, logic, ui } = ChargenStudio;
+                    if (!state.base64ImageData) {
+                        ui.showToast('Por favor, carregue uma imagem primeiro.', 'warning');
+                        return;
+                    }
+                    const prompt = `Analise esta imagem de um personagem. Extraia informações e formate a resposta com um marcador por linha (ex: "Cor da Pele: [valor]"). Campos: Gênero Aparente, Tipo de Corpo, Cor dos Olhos, Cor do Cabelo, Penteado, Cor da Pele, Vestimenta Principal, Armadura, Acessórios Visíveis, Arma Principal, Pose, Expressão Facial, Cenário Imediato, Descrição Geral Detalhada. Se algo não for visível, omita.`;
+                    const payload = { contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType: document.getElementById('imageUpload').files[0].type, data: state.base64ImageData } }] }] };
+                    
+                    const settings = api._getSettings();
+                    const apiKey = settings.googleApiKey || "";
+                    if (!apiKey) {
+                        ui.showToast('Chave de API do Google não encontrada para análise de imagem. Salve-a nas configurações.', 'error');
+                        return;
+                    }
+                    const url = `${config.api.geminiUrl}${config.api.geminiModel}:generateContent?key=${apiKey}`;
+                    const result = await api._apiRequest(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, 'analyzeLoader', 'analyzeImageBtn');
+
+                    if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        logic.parseAndFillForm(result.candidates[0].content.parts[0].text);
+                        ui.showToast('Análise da imagem concluída!', 'success');
+                    } else if (result) {
+                        ui.showToast('A IA respondeu, mas o formato é inesperado.', 'warning');
+                    }
+                },
+                async handleAnalyzeText(textContent) {
+                    const { api, logic, ui } = ChargenStudio;
+                    if (!textContent.trim()) {
+                        ui.showToast('O arquivo de texto está vazio.', 'warning');
+                        return;
+                    }
+                    const prompt = `Analise a descrição de personagem e extraia informações para os campos. Formate a resposta com um marcador por linha (ex: "Nome: [valor]"). Campos: Nome, Gênero, Raça/Espécie, Arquétipo, Profissão, Tipo de Corpo, Cor da Pele, Cor do Cabelo, Penteado, Cor dos Olhos, Vestimenta Principal, Armadura, Arma, Pose, Expressão Facial, Cenário, Tema, Traço Principal, Motivação. Texto: \n---\n${textContent}`;
+                    const resultText = await api.generateText(prompt, 'analyzeTxtLoader', 'analyzeTxtAndFillBtn');
+                    if (resultText) {
+                        logic.parseAndFillForm(resultText);
+                        ui.showToast('Formulário preenchido com base no texto!', 'success');
+                    }
+                },
+                async handleGenerateImagePreview() {
+                    const { api, ui } = ChargenStudio;
+                    let prompt = document.getElementById('generatedPrompt').value;
+                    if (!prompt) {
+                        ui.showToast('Gere um prompt primeiro.', 'warning');
+                        return;
+                    }
+
+                    const qualityTerms = "obra-prima, alta qualidade, fotorrealista, 8k, uhd, arte de fantasia épica";
+                    if (!prompt.toLowerCase().includes('obra-prima')) {
+                        prompt += `, ${qualityTerms}`;
+                    }
+
+                    const imagePreviewEl = document.getElementById('generatedImagePreview');
+                    const placeholderEl = document.getElementById('generatedImagePlaceholder');
+                    imagePreviewEl.classList.add('hidden');
+                    placeholderEl.textContent = "Gerando imagem...";
+                    placeholderEl.classList.remove('hidden');
+
+                    const base64Data = await api.generateImage(prompt, 'imageGenLoader', 'generateImagePreviewBtn');
+
+                    if (base64Data) {
+                        imagePreviewEl.src = `data:image/png;base64,${base64Data}`;
+                        imagePreviewEl.classList.remove('hidden');
+                        placeholderEl.classList.add('hidden');
+                        ui.showToast('Imagem gerada com sucesso!', 'success');
+                    } else {
+                        placeholderEl.textContent = "Falha ao gerar imagem.";
+                    }
+                },
+            },
+            
+            /**
+             * Função de inicialização da aplicação.
+             */
+            init() {
+                this.ui.render.allCategories();
+                this.events.setup();
+
+                // Apply theme from local storage
+                const savedTheme = localStorage.getItem('theme') || 'dark';
+                if (savedTheme === 'light') {
+                    document.body.classList.add('theme-light');
+                }
+                document.getElementById('theme-icon-light').classList.toggle('hidden', savedTheme !== 'light');
+                document.getElementById('theme-icon-dark').classList.toggle('hidden', savedTheme === 'light');
+
+                // Abrir seções padrão na inicialização
+                const promptHeader = Array.from(document.querySelectorAll('.main-section-header')).find(h => h.textContent.includes('Seu Prompt Final'));
+                if(promptHeader) setTimeout(() => this.ui.toggleMainSection(promptHeader), 100);
+
+                const firstCategoryBtn = document.querySelector('.category-button');
+                if(firstCategoryBtn) setTimeout(() => this.ui.toggleAccordion(firstCategoryBtn), 150);
+            }
+        };
+
+        ChargenStudio.init();
+    });
+    </script>
+</body>
+</html>
